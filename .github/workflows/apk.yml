@@ -1,4 +1,4 @@
-name: Build APK v8
+name: Build APK v9
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -585,7 +585,8 @@ jobs:
                       val side = maxOf(b.width, b.height)
                       val out = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888)
                       val cv = android.graphics.Canvas(out)
-                      cv.drawBitmap(b, (side - b.width) / 2f, (side - b.height) / 2f, null)
+                      val r = rounded(b, minOf(b.width, b.height) * 0.11f)
+                      cv.drawBitmap(r, (side - r.width) / 2f, (side - r.height) / 2f, null)
                       out
                   }
               }
