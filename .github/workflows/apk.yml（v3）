@@ -1,0 +1,887 @@
+name: Build APK v3
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write project files
+        run: |
+          mkdir -p app app/src/main app/src/main/java/com/example/nowplaying app/src/main/res/layout app/src/main/res/xml app/src/main/res/drawable
+          cat > settings.gradle.kts <<'EOF'
+          pluginManagement {
+              repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          dependencyResolutionManagement {
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "NowPlayingWidget"
+          include(":app")
+          EOF
+          cat > build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application") version "8.5.2" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+          }
+          EOF
+          cat > gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2g
+          android.nonTransitiveRClass=true
+          EOF
+          cat > app/build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+          android {
+              namespace = "com.example.nowplaying"
+              compileSdk = 34
+              defaultConfig {
+                  applicationId = "com.example.nowplaying"
+                  minSdk = 26
+                  targetSdk = 34
+                  versionCode = 1
+                  versionName = "1.0"
+              }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions { jvmTarget = "17" }
+          }
+          EOF
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+              <uses-permission
+                  android:name="android.permission.READ_EXTERNAL_STORAGE"
+                  android:maxSdkVersion="32" />
+
+              <queries>
+                  <intent>
+                      <action android:name="android.intent.action.MAIN" />
+                  </intent>
+              </queries>
+
+              <application
+                  android:label="Now Playing Widget"
+                  android:theme="@android:style/Theme.DeviceDefault.Light">
+
+                  <activity android:name=".MainActivity" android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+
+                  <receiver android:name=".NowPlayingWidget" android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                      </intent-filter>
+                      <meta-data
+                          android:name="android.appwidget.provider"
+                          android:resource="@xml/widget_info" />
+                  </receiver>
+
+                  <service
+                      android:name=".QueueService"
+                      android:exported="false"
+                      android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+                  <service
+                      android:name=".MusicListener"
+                      android:exported="true"
+                      android:label="Now Playing Widget"
+                      android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+                      <intent-filter>
+                          <action android:name="android.service.notification.NotificationListenerService" />
+                      </intent-filter>
+                  </service>
+              </application>
+          </manifest>
+          EOF
+          cat > app/src/main/res/xml/widget_info.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+              android:minWidth="250dp"
+              android:minHeight="250dp"
+              android:targetCellWidth="4"
+              android:targetCellHeight="4"
+              android:updatePeriodMillis="0"
+              android:resizeMode="horizontal|vertical"
+              android:widgetCategory="home_screen"
+              android:initialLayout="@layout/widget" />
+          EOF
+          cat > app/src/main/res/layout/widget.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/root"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:padding="8dp">
+
+              <LinearLayout
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:gravity="center_vertical"
+                  android:orientation="horizontal">
+
+                  <ImageView
+                      android:id="@+id/art"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:adjustViewBounds="true"
+                      android:maxHeight="120dp"
+                      android:maxWidth="120dp"
+                      android:scaleType="fitCenter" />
+
+                  <LinearLayout
+                      android:layout_width="0dp"
+                      android:layout_height="wrap_content"
+                      android:layout_marginStart="12dp"
+                      android:layout_weight="1"
+                      android:orientation="vertical">
+
+                      <TextView
+                          android:id="@+id/title"
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          android:ellipsize="end"
+                          android:gravity="center"
+                          android:shadowColor="#99000000"
+                          android:shadowDy="2"
+                          android:shadowRadius="6"
+                          android:singleLine="true"
+                          android:textColor="#FFFFFF"
+                          android:textSize="20sp"
+                          android:textStyle="bold" />
+
+                      <TextView
+                          android:id="@+id/artist"
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          android:ellipsize="end"
+                          android:gravity="center"
+                          android:shadowColor="#99000000"
+                          android:shadowDy="2"
+                          android:shadowRadius="6"
+                          android:singleLine="true"
+                          android:textColor="#E6FFFFFF"
+                          android:textSize="17sp" />
+
+                      <LinearLayout
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          android:layout_marginTop="4dp"
+                          android:orientation="horizontal">
+
+                          <ImageButton
+                              android:id="@+id/prev"
+                              android:layout_width="0dp"
+                              android:layout_height="44dp"
+                              android:layout_weight="1"
+                              android:background="@android:color/transparent"
+                              android:src="@drawable/ic_prev" />
+
+                          <ImageButton
+                              android:id="@+id/play"
+                              android:layout_width="0dp"
+                              android:layout_height="44dp"
+                              android:layout_weight="1"
+                              android:background="@android:color/transparent"
+                              android:src="@drawable/ic_play" />
+
+                          <ImageButton
+                              android:id="@+id/next"
+                              android:layout_width="0dp"
+                              android:layout_height="44dp"
+                              android:layout_weight="1"
+                              android:background="@android:color/transparent"
+                              android:src="@drawable/ic_next" />
+                      </LinearLayout>
+                  </LinearLayout>
+              </LinearLayout>
+
+              <TextView
+                  android:id="@+id/queue_header"
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:layout_marginTop="12dp"
+                  android:gravity="center"
+                  android:shadowColor="#99000000"
+                  android:shadowDy="2"
+                  android:shadowRadius="6"
+                  android:textColor="#CCFFFFFF"
+                  android:textSize="15sp" />
+
+              <FrameLayout
+                  android:layout_width="match_parent"
+                  android:layout_height="0dp"
+                  android:layout_weight="1">
+
+                  <ListView
+                      android:id="@+id/queue_list"
+                      android:layout_width="match_parent"
+                      android:layout_height="match_parent"
+                      android:divider="@null"
+                      android:scrollbars="none" />
+
+                  <TextView
+                      android:id="@+id/empty"
+                      android:layout_width="match_parent"
+                      android:layout_height="match_parent"
+                      android:gravity="center"
+                      android:shadowColor="#99000000"
+                      android:shadowDy="2"
+                      android:shadowRadius="6"
+                      android:text="キューなし"
+                      android:textColor="#99FFFFFF"
+                      android:textSize="14sp" />
+              </FrameLayout>
+          </LinearLayout>
+          EOF
+          cat > app/src/main/res/drawable/ic_play.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="48dp"
+              android:height="48dp"
+              android:viewportWidth="24"
+              android:viewportHeight="24">
+              <path
+                  android:fillColor="#FFFFFF"
+                  android:pathData="M8,5v14l11,-7z" />
+          </vector>
+          EOF
+          cat > app/src/main/res/drawable/ic_pause.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="48dp"
+              android:height="48dp"
+              android:viewportWidth="24"
+              android:viewportHeight="24">
+              <path
+                  android:fillColor="#FFFFFF"
+                  android:pathData="M6,5h4v14H6zM14,5h4v14h-4z" />
+          </vector>
+          EOF
+          cat > app/src/main/res/drawable/ic_next.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="48dp"
+              android:height="48dp"
+              android:viewportWidth="24"
+              android:viewportHeight="24">
+              <path
+                  android:fillColor="#FFFFFF"
+                  android:pathData="M6,18l8.5,-6L6,6v12zM16,6h2v12h-2z" />
+          </vector>
+          EOF
+          cat > app/src/main/res/drawable/ic_prev.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="48dp"
+              android:height="48dp"
+              android:viewportWidth="24"
+              android:viewportHeight="24">
+              <path
+                  android:fillColor="#FFFFFF"
+                  android:pathData="M6,6h2v12H6zM18,6l-8.5,6L18,18z" />
+          </vector>
+          EOF
+          cat > app/src/main/res/layout/widget_item.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/item_root"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:gravity="center_vertical"
+              android:orientation="horizontal"
+              android:paddingBottom="8dp"
+              android:paddingEnd="12dp"
+              android:paddingStart="4dp"
+              android:paddingTop="8dp">
+
+              <TextView
+                  android:id="@+id/num"
+                  android:layout_width="36dp"
+                  android:layout_height="wrap_content"
+                  android:gravity="center"
+                  android:shadowColor="#99000000"
+                  android:shadowDy="2"
+                  android:shadowRadius="6"
+                  android:textColor="#CCFFFFFF"
+                  android:textSize="16sp" />
+
+              <LinearLayout
+                  android:layout_width="0dp"
+                  android:layout_height="wrap_content"
+                  android:layout_marginStart="8dp"
+                  android:layout_weight="1"
+                  android:orientation="vertical">
+
+                  <TextView
+                      android:id="@+id/q_title"
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:ellipsize="end"
+                      android:shadowColor="#99000000"
+                      android:shadowDy="2"
+                      android:shadowRadius="6"
+                      android:singleLine="true"
+                      android:textColor="#FFFFFF"
+                      android:textSize="16sp" />
+
+                  <TextView
+                      android:id="@+id/q_artist"
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:ellipsize="end"
+                      android:shadowColor="#99000000"
+                      android:shadowDy="2"
+                      android:shadowRadius="6"
+                      android:singleLine="true"
+                      android:textColor="#CCFFFFFF"
+                      android:textSize="13sp" />
+              </LinearLayout>
+
+              <TextView
+                  android:id="@+id/q_dur"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_marginStart="8dp"
+                  android:shadowColor="#99000000"
+                  android:shadowDy="2"
+                  android:shadowRadius="6"
+                  android:textColor="#CCFFFFFF"
+                  android:textSize="14sp" />
+          </LinearLayout>
+          EOF
+          cat > app/src/main/java/com/example/nowplaying/MainActivity.kt <<'EOF'
+          package com.example.nowplaying
+
+          import android.app.Activity
+          import android.content.Intent
+          import android.os.Build
+          import android.os.Bundle
+          import android.provider.Settings
+          import android.widget.Button
+          import android.widget.LinearLayout
+          import android.widget.TextView
+
+          class MainActivity : Activity() {
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  val perm = if (Build.VERSION.SDK_INT >= 33)
+                      android.Manifest.permission.READ_MEDIA_AUDIO
+                  else android.Manifest.permission.READ_EXTERNAL_STORAGE
+
+                  val layout = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(48, 120, 48, 48)
+                  }
+                  layout.addView(TextView(this).apply {
+                      text = "1. 通知アクセスを許可すると、ウィジェットが再生中の曲を表示できます。\n2. 音楽ファイルへのアクセスを許可すると、同じアルバムの曲を一覧表示できます。\n3. ホーム画面を長押しして「ウィジェット」から追加してください。"
+                      textSize = 16f
+                  })
+                  layout.addView(Button(this).apply {
+                      text = "通知アクセスの設定を開く"
+                      setOnClickListener {
+                          startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                      }
+                  })
+                  layout.addView(Button(this).apply {
+                      text = "音楽ファイルへのアクセスを許可"
+                      setOnClickListener { requestPermissions(arrayOf(perm), 1) }
+                  })
+                  setContentView(layout)
+              }
+          }
+          EOF
+          cat > app/src/main/java/com/example/nowplaying/MusicListener.kt <<'EOF'
+          package com.example.nowplaying
+
+          import android.content.ComponentName
+          import android.media.MediaMetadata
+          import android.media.session.MediaController
+          import android.media.session.MediaSession
+          import android.media.session.MediaSessionManager
+          import android.media.session.PlaybackState
+          import android.os.Handler
+          import android.os.Looper
+          import android.service.notification.NotificationListenerService
+
+          class MusicListener : NotificationListenerService() {
+              private var msm: MediaSessionManager? = null
+              private val controllers = mutableListOf<MediaController>()
+              private val handler = Handler(Looper.getMainLooper())
+
+              private val callback = object : MediaController.Callback() {
+                  override fun onMetadataChanged(metadata: MediaMetadata?) {
+                      WidgetUpdater.update(this@MusicListener)
+                  }
+                  override fun onPlaybackStateChanged(state: PlaybackState?) {
+                      WidgetUpdater.update(this@MusicListener)
+                  }
+                  override fun onQueueChanged(queue: MutableList<MediaSession.QueueItem>?) {
+                      WidgetUpdater.update(this@MusicListener)
+                  }
+              }
+
+              private val sessionsListener =
+                  MediaSessionManager.OnActiveSessionsChangedListener { list ->
+                      attach(list)
+                      WidgetUpdater.update(this@MusicListener)
+                  }
+
+              override fun onListenerConnected() {
+                  val cn = ComponentName(this, MusicListener::class.java)
+                  val m = getSystemService(MediaSessionManager::class.java)
+                  msm = m
+                  m.addOnActiveSessionsChangedListener(sessionsListener, cn)
+                  attach(m.getActiveSessions(cn))
+                  WidgetUpdater.update(this)
+              }
+
+              override fun onListenerDisconnected() {
+                  msm?.removeOnActiveSessionsChangedListener(sessionsListener)
+                  detach()
+              }
+
+              private fun attach(list: List<MediaController>?) {
+                  detach()
+                  list?.forEach {
+                      it.registerCallback(callback, handler)
+                      controllers.add(it)
+                  }
+              }
+
+              private fun detach() {
+                  controllers.forEach { it.unregisterCallback(callback) }
+                  controllers.clear()
+              }
+          }
+          EOF
+          cat > app/src/main/java/com/example/nowplaying/WidgetUpdater.kt <<'EOF'
+          package com.example.nowplaying
+
+          import android.app.PendingIntent
+          import android.appwidget.AppWidgetManager
+          import android.content.ComponentName
+          import android.content.ContentUris
+          import android.content.Context
+          import android.content.Intent
+          import android.graphics.Bitmap
+          import android.graphics.BitmapFactory
+          import android.media.MediaMetadata
+          import android.media.session.MediaController
+          import android.media.session.MediaSessionManager
+          import android.media.session.PlaybackState
+          import android.net.Uri
+          import android.provider.MediaStore
+          import android.widget.RemoteViews
+          import java.net.HttpURLConnection
+          import java.net.URL
+
+          class Track(
+              val title: String,
+              val artist: String,
+              val num: Int,
+              val current: Boolean,
+              val queueId: Long,
+              val uri: String?
+          )
+
+          class Listing(val header: String, val tracks: List<Track>, val album: Boolean)
+
+          object WidgetUpdater {
+              const val ACTION_PREV = "com.example.nowplaying.PREV"
+              const val ACTION_PLAY = "com.example.nowplaying.PLAY"
+              const val ACTION_NEXT = "com.example.nowplaying.NEXT"
+              const val ACTION_PICK = "com.example.nowplaying.PICK"
+              const val ACTION_PLAY_URI = "com.example.nowplaying.PLAYURI"
+
+              @Volatile private var lastPkg: String? = null
+              @Volatile private var artKey: String? = null
+              @Volatile private var artBmp: Bitmap? = null
+              @Volatile private var forcedPlaying: Boolean? = null
+              @Volatile private var forcedAt: Long = 0L
+
+              fun isPlaying(c: MediaController): Boolean {
+                  val s = c.playbackState?.state
+                  return s == PlaybackState.STATE_PLAYING || s == PlaybackState.STATE_BUFFERING
+              }
+
+              fun activeController(ctx: Context): MediaController? {
+                  return try {
+                      val msm = ctx.getSystemService(MediaSessionManager::class.java)
+                      val list = msm.getActiveSessions(ComponentName(ctx, MusicListener::class.java))
+                      val playing = list.firstOrNull { isPlaying(it) }
+                      if (playing != null) {
+                          lastPkg = playing.packageName
+                          playing
+                      } else {
+                          list.firstOrNull { it.packageName == lastPkg && it.metadata != null }
+                              ?: list.firstOrNull { it.metadata != null }
+                      }
+                  } catch (e: SecurityException) {
+                      null
+                  }
+              }
+
+              private fun pi(ctx: Context, action: String): PendingIntent =
+                  PendingIntent.getBroadcast(
+                      ctx, action.hashCode(),
+                      Intent(ctx, NowPlayingWidget::class.java).setAction(action),
+                      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                  )
+
+              private fun pickTemplate(ctx: Context): PendingIntent =
+                  PendingIntent.getBroadcast(
+                      ctx, ACTION_PICK.hashCode(),
+                      Intent(ctx, NowPlayingWidget::class.java).setAction(ACTION_PICK),
+                      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                  )
+
+              private fun uriTemplate(ctx: Context): PendingIntent =
+                  PendingIntent.getBroadcast(
+                      ctx, ACTION_PLAY_URI.hashCode(),
+                      Intent(ctx, NowPlayingWidget::class.java).setAction(ACTION_PLAY_URI),
+                      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                  )
+
+              private fun scaled(b: Bitmap, max: Int = 320): Bitmap {
+                  val r = max.toFloat() / maxOf(b.width, b.height)
+                  if (r >= 1f) return b
+                  val w = (b.width * r).toInt().coerceAtLeast(1)
+                  val h = (b.height * r).toInt().coerceAtLeast(1)
+                  return Bitmap.createScaledBitmap(b, w, h, true)
+              }
+
+              private fun rounded(b: Bitmap, radius: Float): Bitmap {
+                  val out = Bitmap.createBitmap(b.width, b.height, Bitmap.Config.ARGB_8888)
+                  val canvas = android.graphics.Canvas(out)
+                  val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                  val rect = android.graphics.RectF(0f, 0f, b.width.toFloat(), b.height.toFloat())
+                  canvas.drawRoundRect(rect, radius, radius, paint)
+                  paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC_IN)
+                  canvas.drawBitmap(b, 0f, 0f, paint)
+                  return out
+              }
+
+              private fun loadArt(ctx: Context, md: MediaMetadata?): Bitmap? {
+                  if (md == null) return null
+                  val direct = md.getBitmap(MediaMetadata.METADATA_KEY_ART)
+                      ?: md.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+                      ?: md.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
+                  if (direct != null) return direct
+                  val uriStr = md.getString(MediaMetadata.METADATA_KEY_ART_URI)
+                      ?: md.getString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI)
+                      ?: md.getString(MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI)
+                      ?: return null
+                  if (uriStr == artKey) return artBmp
+                  artKey = uriStr
+                  artBmp = null
+                  Thread {
+                      val bmp: Bitmap? = try {
+                          val u = Uri.parse(uriStr)
+                          if (u.scheme == "http" || u.scheme == "https") {
+                              val conn = URL(uriStr).openConnection() as HttpURLConnection
+                              conn.connectTimeout = 8000
+                              conn.readTimeout = 8000
+                              conn.inputStream.use { BitmapFactory.decodeStream(it) }
+                          } else {
+                              ctx.contentResolver.openInputStream(u)?.use { BitmapFactory.decodeStream(it) }
+                          }
+                      } catch (e: Exception) {
+                          null
+                      }
+                      if (bmp != null && artKey == uriStr) {
+                          artBmp = bmp
+                          update(ctx)
+                      }
+                  }.start()
+                  return null
+              }
+
+              private fun albumTracks(ctx: Context, album: String, currentTitle: String?, currentArtist: String?): List<Track> {
+                  val out = mutableListOf<Track>()
+                  try {
+                      val base = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                      val proj = arrayOf(
+                          MediaStore.Audio.Media._ID,
+                          MediaStore.Audio.Media.TITLE,
+                          MediaStore.Audio.Media.ARTIST
+                      )
+                      val sel = "${MediaStore.Audio.Media.ALBUM} = ? AND ${MediaStore.Audio.Media.IS_MUSIC} != 0"
+                      val order = "${MediaStore.Audio.Media.TRACK} ASC"
+                      ctx.contentResolver.query(base, proj, sel, arrayOf(album), order)?.use { cur ->
+                          var i = 0
+                          while (cur.moveToNext()) {
+                              i++
+                              val id = cur.getLong(0)
+                              val t = cur.getString(1) ?: ""
+                              val a = cur.getString(2) ?: ""
+                              val uri = ContentUris.withAppendedId(base, id).toString()
+                              val cur = t == currentTitle && (currentArtist.isNullOrBlank() || a == currentArtist)
+                              out.add(Track(t, a, i, cur, -1L, uri))
+                          }
+                      }
+                  } catch (e: Exception) {
+                  }
+                  return out
+              }
+
+              fun listing(ctx: Context, c: MediaController?): Listing {
+                  val md = c?.metadata
+                  val q = c?.queue
+                  if (c != null && !q.isNullOrEmpty()) {
+                      val activeId = c.playbackState?.activeQueueItemId ?: -1L
+                      var idx = -1
+                      val tracks = q.mapIndexed { i, item ->
+                          val cur = item.queueId == activeId
+                          if (cur) idx = i
+                          Track(
+                              item.description.title?.toString() ?: "",
+                              item.description.subtitle?.toString() ?: "",
+                              i + 1, cur, item.queueId, null
+                          )
+                      }
+                      val pos = if (idx >= 0) (idx + 1).toString() else "-"
+                      return Listing("現在のキュー ($pos/${q.size})", tracks, false)
+                  }
+                  if (md != null) {
+                      val album = md.getString(MediaMetadata.METADATA_KEY_ALBUM)
+                      if (!album.isNullOrBlank()) {
+                          val title = md.getString(MediaMetadata.METADATA_KEY_TITLE)
+                          val artist = md.getString(MediaMetadata.METADATA_KEY_ARTIST)
+                              ?: md.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
+                          val tracks = albumTracks(ctx, album, title, artist)
+                          if (tracks.isNotEmpty()) {
+                              val idx = tracks.indexOfFirst { it.current }
+                              val pos = if (idx >= 0) (idx + 1).toString() else "-"
+                              return Listing("$album ($pos/${tracks.size})", tracks, true)
+                          }
+                      }
+                  }
+                  return Listing("", emptyList(), false)
+              }
+
+              fun handleSkip(ctx: Context, c: MediaController, forward: Boolean) {
+                  val l = listing(ctx, c)
+                  val cur = l.tracks.indexOfFirst { it.current }
+                  if (l.tracks.size > 1 && cur >= 0) {
+                      val atEdge = if (forward) cur == l.tracks.size - 1 else cur == 0
+                      if (atEdge) {
+                          val target = if (forward) l.tracks.first() else l.tracks.last()
+                          when {
+                              target.uri != null ->
+                                  c.transportControls.playFromUri(Uri.parse(target.uri), null)
+                              target.queueId >= 0 ->
+                                  c.transportControls.skipToQueueItem(target.queueId)
+                              forward -> c.transportControls.skipToNext()
+                              else -> c.transportControls.skipToPrevious()
+                          }
+                          return
+                      }
+                  }
+                  if (forward) c.transportControls.skipToNext() else c.transportControls.skipToPrevious()
+              }
+
+              fun update(ctx: Context, playingOverride: Boolean? = null) {
+                  val app = ctx.applicationContext
+                  val mgr = AppWidgetManager.getInstance(app)
+                  val ids = mgr.getAppWidgetIds(ComponentName(app, NowPlayingWidget::class.java))
+                  if (ids.isEmpty()) return
+
+                  val c = activeController(app)
+                  val md = c?.metadata
+                  val title = md?.getString(MediaMetadata.METADATA_KEY_TITLE)
+                  val artist = md?.getString(MediaMetadata.METADATA_KEY_ARTIST)
+                      ?: md?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
+                  val art = loadArt(app, md)?.let { rounded(scaled(it), 36f) }
+                  val actualPlaying = c != null && isPlaying(c)
+                  var playing = actualPlaying
+                  if (playingOverride != null) {
+                      forcedPlaying = playingOverride
+                      forcedAt = System.currentTimeMillis()
+                      playing = playingOverride
+                  } else {
+                      val f = forcedPlaying
+                      if (f != null) {
+                          if (actualPlaying == f) {
+                              forcedPlaying = null
+                          } else if (System.currentTimeMillis() - forcedAt < 3000) {
+                              playing = f
+                          } else {
+                              forcedPlaying = null
+                          }
+                      }
+                  }
+                  val l = listing(app, c)
+
+                  val rv = RemoteViews(app.packageName, R.layout.widget)
+                  rv.setTextViewText(R.id.title, title ?: "再生中の曲なし")
+                  rv.setTextViewText(R.id.artist, artist ?: "")
+                  if (art != null) rv.setImageViewBitmap(R.id.art, art)
+                  else rv.setImageViewResource(R.id.art, android.R.drawable.ic_media_play)
+                  rv.setImageViewResource(
+                      R.id.play,
+                      if (playing) R.drawable.ic_pause else R.drawable.ic_play
+                  )
+                  rv.setOnClickPendingIntent(R.id.prev, pi(app, ACTION_PREV))
+                  rv.setOnClickPendingIntent(R.id.play, pi(app, ACTION_PLAY))
+                  rv.setOnClickPendingIntent(R.id.next, pi(app, ACTION_NEXT))
+
+                  val openPi: PendingIntent? = c?.sessionActivity
+                      ?: c?.packageName?.let { pkg ->
+                          app.packageManager.getLaunchIntentForPackage(pkg)?.let {
+                              PendingIntent.getActivity(app, 4, it, PendingIntent.FLAG_IMMUTABLE)
+                          }
+                      }
+                  if (openPi != null) {
+                      for (id in listOf(R.id.root, R.id.art, R.id.title, R.id.artist, R.id.queue_header, R.id.empty)) {
+                          rv.setOnClickPendingIntent(id, openPi)
+                      }
+                  }
+
+                  rv.setTextViewText(R.id.queue_header, l.header)
+                  rv.setRemoteAdapter(R.id.queue_list, Intent(app, QueueService::class.java))
+                  rv.setEmptyView(R.id.queue_list, R.id.empty)
+                  val template = if (l.album) uriTemplate(app) else pickTemplate(app)
+                  rv.setPendingIntentTemplate(R.id.queue_list, template)
+                  val cur = l.tracks.indexOfFirst { it.current }
+                  if (cur >= 0) rv.setScrollPosition(R.id.queue_list, cur)
+
+                  mgr.updateAppWidget(ids, rv)
+                  mgr.notifyAppWidgetViewDataChanged(ids, R.id.queue_list)
+              }
+          }
+          EOF
+          cat > app/src/main/java/com/example/nowplaying/NowPlayingWidget.kt <<'EOF'
+          package com.example.nowplaying
+
+          import android.appwidget.AppWidgetManager
+          import android.appwidget.AppWidgetProvider
+          import android.content.Context
+          import android.content.Intent
+          import android.os.Handler
+          import android.os.Looper
+
+          class NowPlayingWidget : AppWidgetProvider() {
+              override fun onUpdate(context: Context, mgr: AppWidgetManager, ids: IntArray) {
+                  WidgetUpdater.update(context)
+              }
+
+              override fun onReceive(context: Context, intent: Intent) {
+                  super.onReceive(context, intent)
+                  val action = intent.action ?: return
+                  if (action != WidgetUpdater.ACTION_PREV && action != WidgetUpdater.ACTION_NEXT &&
+                      action != WidgetUpdater.ACTION_PLAY && action != WidgetUpdater.ACTION_PICK &&
+                      action != WidgetUpdater.ACTION_PLAY_URI
+                  ) return
+                  val c = WidgetUpdater.activeController(context) ?: return
+
+                  var forced: Boolean? = null
+                  when (action) {
+                      WidgetUpdater.ACTION_PREV -> WidgetUpdater.handleSkip(context, c, false)
+                      WidgetUpdater.ACTION_NEXT -> WidgetUpdater.handleSkip(context, c, true)
+                      WidgetUpdater.ACTION_PLAY -> {
+                          val playing = WidgetUpdater.isPlaying(c)
+                          if (playing) c.transportControls.pause() else c.transportControls.play()
+                          forced = !playing
+                      }
+                      WidgetUpdater.ACTION_PICK -> {
+                          val id = intent.getLongExtra("id", -1L)
+                          if (id >= 0) c.transportControls.skipToQueueItem(id)
+                      }
+                      WidgetUpdater.ACTION_PLAY_URI -> {
+                          val uri = intent.getStringExtra("uri")
+                          if (!uri.isNullOrBlank()) {
+                              c.transportControls.playFromUri(android.net.Uri.parse(uri), null)
+                              forced = true
+                          }
+                      }
+                  }
+
+                  WidgetUpdater.update(context, forced)
+                  val pending = goAsync()
+                  val handler = Handler(Looper.getMainLooper())
+                  handler.postDelayed({ WidgetUpdater.update(context) }, 350)
+                  handler.postDelayed({
+                      WidgetUpdater.update(context)
+                      pending.finish()
+                  }, 1200)
+              }
+          }
+          EOF
+          cat > app/src/main/java/com/example/nowplaying/QueueService.kt <<'EOF'
+          package com.example.nowplaying
+
+          import android.content.Context
+          import android.content.Intent
+          import android.media.MediaMetadata
+          import android.net.Uri
+          import android.widget.RemoteViews
+          import android.widget.RemoteViewsService
+
+          class QueueService : RemoteViewsService() {
+              override fun onGetViewFactory(intent: Intent): RemoteViewsFactory = Factory(applicationContext)
+
+              private class Factory(val ctx: Context) : RemoteViewsFactory {
+                  var items: List<Track> = emptyList()
+                  var duration = 0L
+
+                  override fun onCreate() {}
+
+                  override fun onDataSetChanged() {
+                      val c = WidgetUpdater.activeController(ctx)
+                      items = WidgetUpdater.listing(ctx, c).tracks
+                      duration = c?.metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
+                  }
+
+                  override fun onDestroy() { items = emptyList() }
+
+                  override fun getCount(): Int = items.size
+
+                  override fun getViewAt(position: Int): RemoteViews {
+                      val rv = RemoteViews(ctx.packageName, R.layout.widget_item)
+                      val t = items.getOrNull(position) ?: return rv
+                      rv.setTextViewText(R.id.num, if (t.current) "▶" else "${t.num}")
+                      rv.setTextViewText(R.id.q_title, t.title)
+                      rv.setTextViewText(R.id.q_artist, t.artist)
+                      rv.setTextViewText(R.id.q_dur, if (t.current && duration > 0) fmt(duration) else "")
+                      val fill = Intent()
+                      if (t.uri != null) fill.putExtra("uri", t.uri)
+                      else fill.putExtra("id", t.queueId)
+                      rv.setOnClickFillInIntent(R.id.item_root, fill)
+                      return rv
+                  }
+
+                  private fun fmt(ms: Long): String {
+                      val s = ms / 1000
+                      return "%d:%02d".format(s / 60, s % 60)
+                  }
+
+                  override fun getLoadingView(): RemoteViews? = null
+                  override fun getViewTypeCount(): Int = 1
+                  override fun getItemId(position: Int): Long = position.toLong()
+                  override fun hasStableIds(): Boolean = false
+              }
+          }
+          EOF
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - run: gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nowplaying-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
