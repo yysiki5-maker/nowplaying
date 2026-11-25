@@ -1,4 +1,4 @@
-name: Build APK v6
+name: Build APK v7
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -130,14 +130,25 @@ jobs:
                   android:gravity="center_vertical"
                   android:orientation="horizontal">
 
-                  <ImageView
-                      android:id="@+id/art"
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:adjustViewBounds="true"
-                      android:maxHeight="120dp"
-                      android:maxWidth="120dp"
-                      android:scaleType="fitCenter" />
+                  <FrameLayout
+                      android:layout_width="104dp"
+                      android:layout_height="104dp">
+
+                      <ImageView
+                          android:id="@+id/art"
+                          android:layout_width="match_parent"
+                          android:layout_height="match_parent"
+                          android:scaleType="fitCenter" />
+
+                      <ImageView
+                          android:id="@+id/eq"
+                          android:layout_width="30dp"
+                          android:layout_height="18dp"
+                          android:layout_gravity="bottom|start"
+                          android:layout_margin="6dp"
+                          android:scaleType="fitCenter" />
+
+                  </FrameLayout>
 
                   <LinearLayout
                       android:layout_width="0dp"
@@ -570,6 +581,15 @@ jobs:
                   return Bitmap.createScaledBitmap(b, w, h, true)
               }
 
+              private fun squarePad(b: Bitmap): Bitmap {
+                  if (b.width == b.height) return b
+                  val side = maxOf(b.width, b.height)
+                  val out = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888)
+                  val cv = android.graphics.Canvas(out)
+                  cv.drawBitmap(b, (side - b.width) / 2f, (side - b.height) / 2f, null)
+                  return out
+              }
+
               private fun rounded(b: Bitmap, radius: Float): Bitmap {
                   val out = Bitmap.createBitmap(b.width, b.height, Bitmap.Config.ARGB_8888)
                   val canvas = android.graphics.Canvas(out)
@@ -706,6 +726,86 @@ jobs:
                   return Listing("", emptyList(), false)
               }
 
+              private val eqHandler = android.os.Handler(android.os.Looper.getMainLooper())
+              @Volatile private var eqRunning = false
+              @Volatile private var eqFrame = 0
+              @Volatile private var eqCtx: Context? = null
+              private val eqPatterns = arrayOf(
+                  floatArrayOf(0.45f, 0.8f, 0.6f, 1.0f, 0.55f),
+                  floatArrayOf(0.7f, 0.5f, 0.9f, 0.6f, 0.85f),
+                  floatArrayOf(0.9f, 0.65f, 0.45f, 0.8f, 0.5f),
+                  floatArrayOf(0.55f, 1.0f, 0.75f, 0.5f, 0.7f),
+                  floatArrayOf(0.8f, 0.6f, 1.0f, 0.65f, 0.45f),
+                  floatArrayOf(0.5f, 0.75f, 0.55f, 0.9f, 0.8f)
+              )
+
+              private fun eqBitmap(frame: Int, active: Boolean): Bitmap {
+                  val w = 150
+                  val h = 90
+                  val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                  val cv = android.graphics.Canvas(bmp)
+                  val bg = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                  bg.color = android.graphics.Color.argb(96, 0, 0, 0)
+                  cv.drawRoundRect(android.graphics.RectF(0f, 0f, w.toFloat(), h.toFloat()), 20f, 20f, bg)
+                  val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                  p.color = android.graphics.Color.WHITE
+                  val hs = if (active) eqPatterns[frame % eqPatterns.size]
+                      else floatArrayOf(0.25f, 0.25f, 0.25f, 0.25f, 0.25f)
+                  val barW = 18f
+                  val gap = 9f
+                  val total = barW * 5 + gap * 4
+                  var x = (w - total) / 2f
+                  val base = h - 16f
+                  val maxBar = 58f
+                  for (f in hs) {
+                      val bh = maxBar * f
+                      cv.drawRoundRect(android.graphics.RectF(x, base - bh, x + barW, base), 6f, 6f, p)
+                      x += barW + gap
+                  }
+                  return bmp
+              }
+
+              private fun pushEq(ctx: Context, active: Boolean) {
+                  try {
+                      val mgr = AppWidgetManager.getInstance(ctx)
+                      val ids = mgr.getAppWidgetIds(ComponentName(ctx, NowPlayingWidget::class.java))
+                      if (ids.isEmpty()) return
+                      val rv = RemoteViews(ctx.packageName, R.layout.widget)
+                      rv.setImageViewBitmap(R.id.eq, eqBitmap(eqFrame, active))
+                      mgr.partiallyUpdateAppWidget(ids, rv)
+                  } catch (e: Exception) {
+                  }
+              }
+
+              private val eqRunnable = object : Runnable {
+                  override fun run() {
+                      if (!eqRunning) return
+                      val ctx = eqCtx
+                      if (ctx == null) {
+                          eqRunning = false
+                          return
+                      }
+                      eqFrame++
+                      pushEq(ctx, true)
+                      eqHandler.postDelayed(this, 180)
+                  }
+              }
+
+              fun syncEq(ctx: Context, playing: Boolean) {
+                  eqCtx = ctx.applicationContext
+                  if (playing) {
+                      if (!eqRunning) {
+                          eqRunning = true
+                          eqHandler.removeCallbacks(eqRunnable)
+                          eqHandler.post(eqRunnable)
+                      }
+                  } else {
+                      eqRunning = false
+                      eqHandler.removeCallbacks(eqRunnable)
+                      pushEq(ctx, false)
+                  }
+              }
+
               fun playTrack(ctx: Context, c: MediaController, t: Track) {
                   val actions = c.playbackState?.actions ?: 0L
                   when {
@@ -759,7 +859,10 @@ jobs:
                   val title = md?.getString(MediaMetadata.METADATA_KEY_TITLE)
                   val artist = md?.getString(MediaMetadata.METADATA_KEY_ARTIST)
                       ?: md?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
-                  val art = loadArt(app, md)?.let { rounded(scaled(it), 36f) }
+                  val art = loadArt(app, md)?.let {
+                      val sq = squarePad(scaled(it, 512))
+                      rounded(sq, sq.width * 0.11f)
+                  }
                   val actualPlaying = c != null && isPlaying(c)
                   var playing = actualPlaying
                   if (playingOverride != null) {
@@ -789,6 +892,7 @@ jobs:
                       R.id.play,
                       if (playing) R.drawable.ic_pause else R.drawable.ic_play
                   )
+                  rv.setImageViewBitmap(R.id.eq, eqBitmap(eqFrame, playing))
                   rv.setOnClickPendingIntent(R.id.prev, pi(app, ACTION_PREV))
                   rv.setOnClickPendingIntent(R.id.play, pi(app, ACTION_PLAY))
                   rv.setOnClickPendingIntent(R.id.next, pi(app, ACTION_NEXT))
@@ -819,6 +923,7 @@ jobs:
                       lastListSig = sig
                       mgr.notifyAppWidgetViewDataChanged(ids, R.id.queue_list)
                   }
+                  syncEq(app, playing)
               }
           }
           EOF
