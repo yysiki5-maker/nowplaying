@@ -1,4 +1,4 @@
-name: Build APK v3
+name: Build APK v6
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -185,6 +185,7 @@ jobs:
                               android:layout_height="44dp"
                               android:layout_weight="1"
                               android:background="@android:color/transparent"
+                          android:padding="12dp"
                               android:src="@drawable/ic_prev" />
 
                           <ImageButton
@@ -193,6 +194,7 @@ jobs:
                               android:layout_height="44dp"
                               android:layout_weight="1"
                               android:background="@android:color/transparent"
+                          android:padding="12dp"
                               android:src="@drawable/ic_play" />
 
                           <ImageButton
@@ -201,6 +203,7 @@ jobs:
                               android:layout_height="44dp"
                               android:layout_weight="1"
                               android:background="@android:color/transparent"
+                          android:padding="12dp"
                               android:src="@drawable/ic_next" />
                       </LinearLayout>
                   </LinearLayout>
@@ -492,7 +495,9 @@ jobs:
               val num: Int,
               val current: Boolean,
               val queueId: Long,
-              val uri: String?
+              val uri: String?,
+              val mediaId: Long = -1L,
+              val ucrtId: String? = null
           )
 
           class Listing(val header: String, val tracks: List<Track>, val album: Boolean)
@@ -505,10 +510,12 @@ jobs:
               const val ACTION_PLAY_URI = "com.example.nowplaying.PLAYURI"
 
               @Volatile private var lastPkg: String? = null
+              @Volatile private var lastToken: android.media.session.MediaSession.Token? = null
               @Volatile private var artKey: String? = null
               @Volatile private var artBmp: Bitmap? = null
               @Volatile private var forcedPlaying: Boolean? = null
               @Volatile private var forcedAt: Long = 0L
+              @Volatile private var lastListSig: String? = null
 
               fun isPlaying(c: MediaController): Boolean {
                   val s = c.playbackState?.state
@@ -519,14 +526,16 @@ jobs:
                   return try {
                       val msm = ctx.getSystemService(MediaSessionManager::class.java)
                       val list = msm.getActiveSessions(ComponentName(ctx, MusicListener::class.java))
+                      val byToken = list.firstOrNull { it.sessionToken == lastToken && it.metadata != null }
                       val playing = list.firstOrNull { isPlaying(it) }
-                      if (playing != null) {
-                          lastPkg = playing.packageName
-                          playing
-                      } else {
-                          list.firstOrNull { it.packageName == lastPkg && it.metadata != null }
-                              ?: list.firstOrNull { it.metadata != null }
+                      val chosen = byToken ?: playing
+                          ?: list.firstOrNull { it.packageName == lastPkg && it.metadata != null }
+                          ?: list.firstOrNull { it.metadata != null }
+                      if (chosen != null) {
+                          lastPkg = chosen.packageName
+                          if (chosen.metadata != null) lastToken = chosen.sessionToken
                       }
+                      chosen
                   } catch (e: SecurityException) {
                       null
                   }
@@ -607,32 +616,58 @@ jobs:
                   return null
               }
 
-              private fun albumTracks(ctx: Context, album: String, currentTitle: String?, currentArtist: String?): List<Track> {
-                  val out = mutableListOf<Track>()
+              private fun norm(s: String?): String =
+                  (s ?: "").trim().lowercase().filter { !it.isWhitespace() }
+
+              private fun albumTracks(ctx: Context, album: String, currentTitle: String?, currentArtist: String?, currentDuration: Long): List<Track> {
+                  data class Row(val id: Long, val t: String, val a: String, val dur: Long, val uri: String, val aa: String)
+                  val rows = mutableListOf<Row>()
                   try {
                       val base = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
                       val proj = arrayOf(
                           MediaStore.Audio.Media._ID,
                           MediaStore.Audio.Media.TITLE,
-                          MediaStore.Audio.Media.ARTIST
+                          MediaStore.Audio.Media.ARTIST,
+                          MediaStore.Audio.Media.DURATION,
+                          "album_artist"
                       )
                       val sel = "${MediaStore.Audio.Media.ALBUM} = ? AND ${MediaStore.Audio.Media.IS_MUSIC} != 0"
                       val order = "${MediaStore.Audio.Media.TRACK} ASC"
                       ctx.contentResolver.query(base, proj, sel, arrayOf(album), order)?.use { cur ->
-                          var i = 0
                           while (cur.moveToNext()) {
-                              i++
                               val id = cur.getLong(0)
                               val t = cur.getString(1) ?: ""
                               val a = cur.getString(2) ?: ""
+                              val d = cur.getLong(3)
+                              val aa = try { cur.getString(4) ?: "" } catch (e: Exception) { "" }
                               val uri = ContentUris.withAppendedId(base, id).toString()
-                              val cur = t == currentTitle && (currentArtist.isNullOrBlank() || a == currentArtist)
-                              out.add(Track(t, a, i, cur, -1L, uri))
+                              rows.add(Row(id, t, a, d, uri, aa))
                           }
                       }
                   } catch (e: Exception) {
                   }
-                  return out
+                  var curIdx = -1
+                  if (!currentTitle.isNullOrBlank()) {
+                      val cand = rows.indices.filter { norm(rows[it].t) == norm(currentTitle) }
+                      curIdx = when {
+                          cand.isEmpty() -> -1
+                          cand.size == 1 -> cand[0]
+                          else -> cand.firstOrNull { !currentArtist.isNullOrBlank() && norm(rows[it].a) == norm(currentArtist) }
+                              ?: cand.firstOrNull { currentDuration > 0 && kotlin.math.abs(rows[it].dur - currentDuration) <= 2000 }
+                              ?: cand[0]
+                      }
+                  }
+                  val aaCommon = rows.map { it.aa }.filter { it.isNotBlank() }
+                      .groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+                  val distinctArtists = rows.map { it.a }.distinct()
+                  val albumKey = when {
+                      aaCommon != null -> "a:" + aaCommon + "\u0000" + album
+                      distinctArtists.size == 1 -> "a:" + distinctArtists[0] + "\u0000" + album
+                      else -> null
+                  }
+                  return rows.mapIndexed { i, r ->
+                      Track(r.t, r.a, i + 1, i == curIdx, -1L, r.uri, r.id, albumKey?.let { k -> "t|album:" + k + "|" + i })
+                  }
               }
 
               fun listing(ctx: Context, c: MediaController?): Listing {
@@ -651,7 +686,7 @@ jobs:
                           )
                       }
                       val pos = if (idx >= 0) (idx + 1).toString() else "-"
-                      return Listing("現在のキュー ($pos/${q.size})", tracks, false)
+                      return Listing("再生キュー ($pos/${q.size})", tracks, false)
                   }
                   if (md != null) {
                       val album = md.getString(MediaMetadata.METADATA_KEY_ALBUM)
@@ -659,7 +694,8 @@ jobs:
                           val title = md.getString(MediaMetadata.METADATA_KEY_TITLE)
                           val artist = md.getString(MediaMetadata.METADATA_KEY_ARTIST)
                               ?: md.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
-                          val tracks = albumTracks(ctx, album, title, artist)
+                          val dur = md.getLong(MediaMetadata.METADATA_KEY_DURATION)
+                          val tracks = albumTracks(ctx, album, title, artist, dur)
                           if (tracks.isNotEmpty()) {
                               val idx = tracks.indexOfFirst { it.current }
                               val pos = if (idx >= 0) (idx + 1).toString() else "-"
@@ -670,6 +706,34 @@ jobs:
                   return Listing("", emptyList(), false)
               }
 
+              fun playTrack(ctx: Context, c: MediaController, t: Track) {
+                  val actions = c.playbackState?.actions ?: 0L
+                  when {
+                      t.queueId >= 0 && (actions and PlaybackState.ACTION_SKIP_TO_QUEUE_ITEM) != 0L ->
+                          c.transportControls.skipToQueueItem(t.queueId)
+                      t.ucrtId != null && (actions and PlaybackState.ACTION_PLAY_FROM_MEDIA_ID) != 0L ->
+                          c.transportControls.playFromMediaId(t.ucrtId, null)
+                      t.uri != null && (actions and PlaybackState.ACTION_PLAY_FROM_URI) != 0L ->
+                          c.transportControls.playFromUri(Uri.parse(t.uri), null)
+                      t.title.isNotBlank() && (actions and PlaybackState.ACTION_PLAY_FROM_SEARCH) != 0L ->
+                          c.transportControls.playFromSearch(t.title, null)
+                      t.mediaId >= 0 && (actions and PlaybackState.ACTION_PLAY_FROM_MEDIA_ID) != 0L ->
+                          c.transportControls.playFromMediaId(t.mediaId.toString(), null)
+                      t.uri != null -> {
+                          val opened = try {
+                              val intent = Intent(Intent.ACTION_VIEW)
+                                  .setDataAndType(Uri.parse(t.uri), "audio/*")
+                                  .setPackage(c.packageName)
+                                  .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                              ctx.startActivity(intent)
+                              true
+                          } catch (e: Exception) {
+                              false
+                          }
+                      }
+                  }
+              }
+
               fun handleSkip(ctx: Context, c: MediaController, forward: Boolean) {
                   val l = listing(ctx, c)
                   val cur = l.tracks.indexOfFirst { it.current }
@@ -677,14 +741,7 @@ jobs:
                       val atEdge = if (forward) cur == l.tracks.size - 1 else cur == 0
                       if (atEdge) {
                           val target = if (forward) l.tracks.first() else l.tracks.last()
-                          when {
-                              target.uri != null ->
-                                  c.transportControls.playFromUri(Uri.parse(target.uri), null)
-                              target.queueId >= 0 ->
-                                  c.transportControls.skipToQueueItem(target.queueId)
-                              forward -> c.transportControls.skipToNext()
-                              else -> c.transportControls.skipToPrevious()
-                          }
+                          playTrack(ctx, c, target)
                           return
                       }
                   }
@@ -757,7 +814,11 @@ jobs:
                   if (cur >= 0) rv.setScrollPosition(R.id.queue_list, cur)
 
                   mgr.updateAppWidget(ids, rv)
-                  mgr.notifyAppWidgetViewDataChanged(ids, R.id.queue_list)
+                  val sig = l.header + "|" + l.tracks.joinToString(",") { it.title + "#" + it.num + if (it.current) "*" else "" }
+                  if (sig != lastListSig) {
+                      lastListSig = sig
+                      mgr.notifyAppWidgetViewDataChanged(ids, R.id.queue_list)
+                  }
               }
           }
           EOF
@@ -800,8 +861,11 @@ jobs:
                       }
                       WidgetUpdater.ACTION_PLAY_URI -> {
                           val uri = intent.getStringExtra("uri")
+                          val mid = intent.getLongExtra("mid", -1L)
+                          val ttl = intent.getStringExtra("title") ?: ""
+                          val uc = intent.getStringExtra("ucrt")
                           if (!uri.isNullOrBlank()) {
-                              c.transportControls.playFromUri(android.net.Uri.parse(uri), null)
+                              WidgetUpdater.playTrack(context, c, Track(ttl, "", 0, false, -1L, uri, mid, uc))
                               forced = true
                           }
                       }
@@ -810,11 +874,10 @@ jobs:
                   WidgetUpdater.update(context, forced)
                   val pending = goAsync()
                   val handler = Handler(Looper.getMainLooper())
-                  handler.postDelayed({ WidgetUpdater.update(context) }, 350)
                   handler.postDelayed({
                       WidgetUpdater.update(context)
                       pending.finish()
-                  }, 1200)
+                  }, 600)
               }
           }
           EOF
@@ -855,7 +918,12 @@ jobs:
                       rv.setTextViewText(R.id.q_artist, t.artist)
                       rv.setTextViewText(R.id.q_dur, if (t.current && duration > 0) fmt(duration) else "")
                       val fill = Intent()
-                      if (t.uri != null) fill.putExtra("uri", t.uri)
+                      fill.putExtra("title", t.title)
+                      if (t.ucrtId != null) fill.putExtra("ucrt", t.ucrtId)
+                      if (t.uri != null) {
+                          fill.putExtra("uri", t.uri)
+                          fill.putExtra("mid", t.mediaId)
+                      }
                       else fill.putExtra("id", t.queueId)
                       rv.setOnClickFillInIntent(R.id.item_root, fill)
                       return rv
