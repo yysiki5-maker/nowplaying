@@ -1,4 +1,4 @@
-name: Build APK v2
+name: Build APK v3
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -7,7 +7,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Write project files
         run: |
-          mkdir -p app app/src/main app/src/main/java/com/example/nowplaying app/src/main/res/layout app/src/main/res/xml
+          mkdir -p app app/src/main app/src/main/java/com/example/nowplaying app/src/main/res/layout app/src/main/res/xml app/src/main/res/drawable
           cat > settings.gradle.kts <<'EOF'
           pluginManagement {
               repositories { google(); mavenCentral(); gradlePluginPortal() }
@@ -185,7 +185,7 @@ jobs:
                               android:layout_height="44dp"
                               android:layout_weight="1"
                               android:background="@android:color/transparent"
-                              android:src="@android:drawable/ic_media_previous" />
+                              android:src="@drawable/ic_prev" />
 
                           <ImageButton
                               android:id="@+id/play"
@@ -193,7 +193,7 @@ jobs:
                               android:layout_height="44dp"
                               android:layout_weight="1"
                               android:background="@android:color/transparent"
-                              android:src="@android:drawable/ic_media_play" />
+                              android:src="@drawable/ic_play" />
 
                           <ImageButton
                               android:id="@+id/next"
@@ -201,7 +201,7 @@ jobs:
                               android:layout_height="44dp"
                               android:layout_weight="1"
                               android:background="@android:color/transparent"
-                              android:src="@android:drawable/ic_media_next" />
+                              android:src="@drawable/ic_next" />
                       </LinearLayout>
                   </LinearLayout>
               </LinearLayout>
@@ -243,6 +243,54 @@ jobs:
                       android:textSize="14sp" />
               </FrameLayout>
           </LinearLayout>
+          EOF
+          cat > app/src/main/res/drawable/ic_play.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="48dp"
+              android:height="48dp"
+              android:viewportWidth="24"
+              android:viewportHeight="24">
+              <path
+                  android:fillColor="#FFFFFF"
+                  android:pathData="M8,5v14l11,-7z" />
+          </vector>
+          EOF
+          cat > app/src/main/res/drawable/ic_pause.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="48dp"
+              android:height="48dp"
+              android:viewportWidth="24"
+              android:viewportHeight="24">
+              <path
+                  android:fillColor="#FFFFFF"
+                  android:pathData="M6,5h4v14H6zM14,5h4v14h-4z" />
+          </vector>
+          EOF
+          cat > app/src/main/res/drawable/ic_next.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="48dp"
+              android:height="48dp"
+              android:viewportWidth="24"
+              android:viewportHeight="24">
+              <path
+                  android:fillColor="#FFFFFF"
+                  android:pathData="M6,18l8.5,-6L6,6v12zM16,6h2v12h-2z" />
+          </vector>
+          EOF
+          cat > app/src/main/res/drawable/ic_prev.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="48dp"
+              android:height="48dp"
+              android:viewportWidth="24"
+              android:viewportHeight="24">
+              <path
+                  android:fillColor="#FFFFFF"
+                  android:pathData="M6,6h2v12H6zM18,6l-8.5,6L18,18z" />
+          </vector>
           EOF
           cat > app/src/main/res/layout/widget_item.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
@@ -454,10 +502,13 @@ jobs:
               const val ACTION_PLAY = "com.example.nowplaying.PLAY"
               const val ACTION_NEXT = "com.example.nowplaying.NEXT"
               const val ACTION_PICK = "com.example.nowplaying.PICK"
+              const val ACTION_PLAY_URI = "com.example.nowplaying.PLAYURI"
 
               @Volatile private var lastPkg: String? = null
               @Volatile private var artKey: String? = null
               @Volatile private var artBmp: Bitmap? = null
+              @Volatile private var forcedPlaying: Boolean? = null
+              @Volatile private var forcedAt: Long = 0L
 
               fun isPlaying(c: MediaController): Boolean {
                   val s = c.playbackState?.state
@@ -495,11 +546,10 @@ jobs:
                       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
                   )
 
-              private fun viewTemplate(ctx: Context, pkg: String): PendingIntent =
-                  PendingIntent.getActivity(
-                      ctx, 3,
-                      Intent(Intent.ACTION_VIEW).setPackage(pkg)
-                          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION),
+              private fun uriTemplate(ctx: Context): PendingIntent =
+                  PendingIntent.getBroadcast(
+                      ctx, ACTION_PLAY_URI.hashCode(),
+                      Intent(ctx, NowPlayingWidget::class.java).setAction(ACTION_PLAY_URI),
                       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
                   )
 
@@ -509,6 +559,17 @@ jobs:
                   val w = (b.width * r).toInt().coerceAtLeast(1)
                   val h = (b.height * r).toInt().coerceAtLeast(1)
                   return Bitmap.createScaledBitmap(b, w, h, true)
+              }
+
+              private fun rounded(b: Bitmap, radius: Float): Bitmap {
+                  val out = Bitmap.createBitmap(b.width, b.height, Bitmap.Config.ARGB_8888)
+                  val canvas = android.graphics.Canvas(out)
+                  val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                  val rect = android.graphics.RectF(0f, 0f, b.width.toFloat(), b.height.toFloat())
+                  canvas.drawRoundRect(rect, radius, radius, paint)
+                  paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC_IN)
+                  canvas.drawBitmap(b, 0f, 0f, paint)
+                  return out
               }
 
               private fun loadArt(ctx: Context, md: MediaMetadata?): Bitmap? {
@@ -546,7 +607,7 @@ jobs:
                   return null
               }
 
-              private fun albumTracks(ctx: Context, album: String, currentTitle: String?): List<Track> {
+              private fun albumTracks(ctx: Context, album: String, currentTitle: String?, currentArtist: String?): List<Track> {
                   val out = mutableListOf<Track>()
                   try {
                       val base = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
@@ -565,7 +626,8 @@ jobs:
                               val t = cur.getString(1) ?: ""
                               val a = cur.getString(2) ?: ""
                               val uri = ContentUris.withAppendedId(base, id).toString()
-                              out.add(Track(t, a, i, t == currentTitle, -1L, uri))
+                              val cur = t == currentTitle && (currentArtist.isNullOrBlank() || a == currentArtist)
+                              out.add(Track(t, a, i, cur, -1L, uri))
                           }
                       }
                   } catch (e: Exception) {
@@ -595,7 +657,9 @@ jobs:
                       val album = md.getString(MediaMetadata.METADATA_KEY_ALBUM)
                       if (!album.isNullOrBlank()) {
                           val title = md.getString(MediaMetadata.METADATA_KEY_TITLE)
-                          val tracks = albumTracks(ctx, album, title)
+                          val artist = md.getString(MediaMetadata.METADATA_KEY_ARTIST)
+                              ?: md.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
+                          val tracks = albumTracks(ctx, album, title, artist)
                           if (tracks.isNotEmpty()) {
                               val idx = tracks.indexOfFirst { it.current }
                               val pos = if (idx >= 0) (idx + 1).toString() else "-"
@@ -604,6 +668,27 @@ jobs:
                       }
                   }
                   return Listing("", emptyList(), false)
+              }
+
+              fun handleSkip(ctx: Context, c: MediaController, forward: Boolean) {
+                  val l = listing(ctx, c)
+                  val cur = l.tracks.indexOfFirst { it.current }
+                  if (l.tracks.size > 1 && cur >= 0) {
+                      val atEdge = if (forward) cur == l.tracks.size - 1 else cur == 0
+                      if (atEdge) {
+                          val target = if (forward) l.tracks.first() else l.tracks.last()
+                          when {
+                              target.uri != null ->
+                                  c.transportControls.playFromUri(Uri.parse(target.uri), null)
+                              target.queueId >= 0 ->
+                                  c.transportControls.skipToQueueItem(target.queueId)
+                              forward -> c.transportControls.skipToNext()
+                              else -> c.transportControls.skipToPrevious()
+                          }
+                          return
+                      }
+                  }
+                  if (forward) c.transportControls.skipToNext() else c.transportControls.skipToPrevious()
               }
 
               fun update(ctx: Context, playingOverride: Boolean? = null) {
@@ -617,8 +702,25 @@ jobs:
                   val title = md?.getString(MediaMetadata.METADATA_KEY_TITLE)
                   val artist = md?.getString(MediaMetadata.METADATA_KEY_ARTIST)
                       ?: md?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
-                  val art = loadArt(app, md)?.let { scaled(it) }
-                  val playing = playingOverride ?: (c != null && isPlaying(c))
+                  val art = loadArt(app, md)?.let { rounded(scaled(it), 36f) }
+                  val actualPlaying = c != null && isPlaying(c)
+                  var playing = actualPlaying
+                  if (playingOverride != null) {
+                      forcedPlaying = playingOverride
+                      forcedAt = System.currentTimeMillis()
+                      playing = playingOverride
+                  } else {
+                      val f = forcedPlaying
+                      if (f != null) {
+                          if (actualPlaying == f) {
+                              forcedPlaying = null
+                          } else if (System.currentTimeMillis() - forcedAt < 3000) {
+                              playing = f
+                          } else {
+                              forcedPlaying = null
+                          }
+                      }
+                  }
                   val l = listing(app, c)
 
                   val rv = RemoteViews(app.packageName, R.layout.widget)
@@ -628,7 +730,7 @@ jobs:
                   else rv.setImageViewResource(R.id.art, android.R.drawable.ic_media_play)
                   rv.setImageViewResource(
                       R.id.play,
-                      if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+                      if (playing) R.drawable.ic_pause else R.drawable.ic_play
                   )
                   rv.setOnClickPendingIntent(R.id.prev, pi(app, ACTION_PREV))
                   rv.setOnClickPendingIntent(R.id.play, pi(app, ACTION_PLAY))
@@ -649,7 +751,7 @@ jobs:
                   rv.setTextViewText(R.id.queue_header, l.header)
                   rv.setRemoteAdapter(R.id.queue_list, Intent(app, QueueService::class.java))
                   rv.setEmptyView(R.id.queue_list, R.id.empty)
-                  val template = if (l.album && c != null) viewTemplate(app, c.packageName) else pickTemplate(app)
+                  val template = if (l.album) uriTemplate(app) else pickTemplate(app)
                   rv.setPendingIntentTemplate(R.id.queue_list, template)
                   val cur = l.tracks.indexOfFirst { it.current }
                   if (cur >= 0) rv.setScrollPosition(R.id.queue_list, cur)
@@ -678,14 +780,15 @@ jobs:
                   super.onReceive(context, intent)
                   val action = intent.action ?: return
                   if (action != WidgetUpdater.ACTION_PREV && action != WidgetUpdater.ACTION_NEXT &&
-                      action != WidgetUpdater.ACTION_PLAY && action != WidgetUpdater.ACTION_PICK
+                      action != WidgetUpdater.ACTION_PLAY && action != WidgetUpdater.ACTION_PICK &&
+                      action != WidgetUpdater.ACTION_PLAY_URI
                   ) return
                   val c = WidgetUpdater.activeController(context) ?: return
 
                   var forced: Boolean? = null
                   when (action) {
-                      WidgetUpdater.ACTION_PREV -> c.transportControls.skipToPrevious()
-                      WidgetUpdater.ACTION_NEXT -> c.transportControls.skipToNext()
+                      WidgetUpdater.ACTION_PREV -> WidgetUpdater.handleSkip(context, c, false)
+                      WidgetUpdater.ACTION_NEXT -> WidgetUpdater.handleSkip(context, c, true)
                       WidgetUpdater.ACTION_PLAY -> {
                           val playing = WidgetUpdater.isPlaying(c)
                           if (playing) c.transportControls.pause() else c.transportControls.play()
@@ -695,14 +798,23 @@ jobs:
                           val id = intent.getLongExtra("id", -1L)
                           if (id >= 0) c.transportControls.skipToQueueItem(id)
                       }
+                      WidgetUpdater.ACTION_PLAY_URI -> {
+                          val uri = intent.getStringExtra("uri")
+                          if (!uri.isNullOrBlank()) {
+                              c.transportControls.playFromUri(android.net.Uri.parse(uri), null)
+                              forced = true
+                          }
+                      }
                   }
 
                   WidgetUpdater.update(context, forced)
                   val pending = goAsync()
-                  Handler(Looper.getMainLooper()).postDelayed({
+                  val handler = Handler(Looper.getMainLooper())
+                  handler.postDelayed({ WidgetUpdater.update(context) }, 350)
+                  handler.postDelayed({
                       WidgetUpdater.update(context)
                       pending.finish()
-                  }, 700)
+                  }, 1200)
               }
           }
           EOF
@@ -743,7 +855,7 @@ jobs:
                       rv.setTextViewText(R.id.q_artist, t.artist)
                       rv.setTextViewText(R.id.q_dur, if (t.current && duration > 0) fmt(duration) else "")
                       val fill = Intent()
-                      if (t.uri != null) fill.setDataAndType(Uri.parse(t.uri), "audio/*")
+                      if (t.uri != null) fill.putExtra("uri", t.uri)
                       else fill.putExtra("id", t.queueId)
                       rv.setOnClickFillInIntent(R.id.item_root, fill)
                       return rv
