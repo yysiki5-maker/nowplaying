@@ -53,6 +53,19 @@ jobs:
           cat > app/src/main/AndroidManifest.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+              <uses-permission
+                  android:name="android.permission.READ_EXTERNAL_STORAGE"
+                  android:maxSdkVersion="32" />
+
+              <queries>
+                  <intent>
+                      <action android:name="android.intent.action.MAIN" />
+                  </intent>
+              </queries>
+
               <application
                   android:label="Now Playing Widget"
                   android:theme="@android:style/Theme.DeviceDefault.Light">
@@ -119,9 +132,12 @@ jobs:
 
                   <ImageView
                       android:id="@+id/art"
-                      android:layout_width="96dp"
-                      android:layout_height="96dp"
-                      android:scaleType="centerCrop" />
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:adjustViewBounds="true"
+                      android:maxHeight="120dp"
+                      android:maxWidth="120dp"
+                      android:scaleType="fitCenter" />
 
                   <LinearLayout
                       android:layout_width="0dp"
@@ -301,6 +317,7 @@ jobs:
 
           import android.app.Activity
           import android.content.Intent
+          import android.os.Build
           import android.os.Bundle
           import android.provider.Settings
           import android.widget.Button
@@ -310,12 +327,16 @@ jobs:
           class MainActivity : Activity() {
               override fun onCreate(savedInstanceState: Bundle?) {
                   super.onCreate(savedInstanceState)
+                  val perm = if (Build.VERSION.SDK_INT >= 33)
+                      android.Manifest.permission.READ_MEDIA_AUDIO
+                  else android.Manifest.permission.READ_EXTERNAL_STORAGE
+
                   val layout = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
                       setPadding(48, 120, 48, 48)
                   }
                   layout.addView(TextView(this).apply {
-                      text = "通知アクセスを許可すると、ウィジェットが再生中の曲を表示できます。\n許可後、ホーム画面を長押しして「ウィジェット」から追加してください。"
+                      text = "1. 通知アクセスを許可すると、ウィジェットが再生中の曲を表示できます。\n2. 音楽ファイルへのアクセスを許可すると、同じアルバムの曲を一覧表示できます。\n3. ホーム画面を長押しして「ウィジェット」から追加してください。"
                       textSize = 16f
                   })
                   layout.addView(Button(this).apply {
@@ -323,6 +344,10 @@ jobs:
                       setOnClickListener {
                           startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                       }
+                  })
+                  layout.addView(Button(this).apply {
+                      text = "音楽ファイルへのアクセスを許可"
+                      setOnClickListener { requestPermissions(arrayOf(perm), 1) }
                   })
                   setContentView(layout)
               }
@@ -333,15 +358,18 @@ jobs:
 
           import android.content.ComponentName
           import android.media.MediaMetadata
-          import android.media.session.PlaybackState
           import android.media.session.MediaController
           import android.media.session.MediaSession
           import android.media.session.MediaSessionManager
+          import android.media.session.PlaybackState
+          import android.os.Handler
+          import android.os.Looper
           import android.service.notification.NotificationListenerService
 
           class MusicListener : NotificationListenerService() {
               private var msm: MediaSessionManager? = null
               private val controllers = mutableListOf<MediaController>()
+              private val handler = Handler(Looper.getMainLooper())
 
               private val callback = object : MediaController.Callback() {
                   override fun onMetadataChanged(metadata: MediaMetadata?) {
@@ -378,7 +406,7 @@ jobs:
               private fun attach(list: List<MediaController>?) {
                   detach()
                   list?.forEach {
-                      it.registerCallback(callback)
+                      it.registerCallback(callback, handler)
                       controllers.add(it)
                   }
               }
@@ -395,14 +423,31 @@ jobs:
           import android.app.PendingIntent
           import android.appwidget.AppWidgetManager
           import android.content.ComponentName
+          import android.content.ContentUris
           import android.content.Context
           import android.content.Intent
           import android.graphics.Bitmap
+          import android.graphics.BitmapFactory
           import android.media.MediaMetadata
-          import android.media.session.PlaybackState
           import android.media.session.MediaController
           import android.media.session.MediaSessionManager
+          import android.media.session.PlaybackState
+          import android.net.Uri
+          import android.provider.MediaStore
           import android.widget.RemoteViews
+          import java.net.HttpURLConnection
+          import java.net.URL
+
+          class Track(
+              val title: String,
+              val artist: String,
+              val num: Int,
+              val current: Boolean,
+              val queueId: Long,
+              val uri: String?
+          )
+
+          class Listing(val header: String, val tracks: List<Track>, val album: Boolean)
 
           object WidgetUpdater {
               const val ACTION_PREV = "com.example.nowplaying.PREV"
@@ -410,12 +455,27 @@ jobs:
               const val ACTION_NEXT = "com.example.nowplaying.NEXT"
               const val ACTION_PICK = "com.example.nowplaying.PICK"
 
+              @Volatile private var lastPkg: String? = null
+              @Volatile private var artKey: String? = null
+              @Volatile private var artBmp: Bitmap? = null
+
+              fun isPlaying(c: MediaController): Boolean {
+                  val s = c.playbackState?.state
+                  return s == PlaybackState.STATE_PLAYING || s == PlaybackState.STATE_BUFFERING
+              }
+
               fun activeController(ctx: Context): MediaController? {
                   return try {
                       val msm = ctx.getSystemService(MediaSessionManager::class.java)
                       val list = msm.getActiveSessions(ComponentName(ctx, MusicListener::class.java))
-                      list.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
-                          ?: list.firstOrNull { it.metadata != null }
+                      val playing = list.firstOrNull { isPlaying(it) }
+                      if (playing != null) {
+                          lastPkg = playing.packageName
+                          playing
+                      } else {
+                          list.firstOrNull { it.packageName == lastPkg && it.metadata != null }
+                              ?: list.firstOrNull { it.metadata != null }
+                      }
                   } catch (e: SecurityException) {
                       null
                   }
@@ -435,26 +495,133 @@ jobs:
                       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
                   )
 
-              fun update(ctx: Context) {
-                  val mgr = AppWidgetManager.getInstance(ctx)
-                  val ids = mgr.getAppWidgetIds(ComponentName(ctx, NowPlayingWidget::class.java))
+              private fun viewTemplate(ctx: Context, pkg: String): PendingIntent =
+                  PendingIntent.getActivity(
+                      ctx, 3,
+                      Intent(Intent.ACTION_VIEW).setPackage(pkg)
+                          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                  )
+
+              private fun scaled(b: Bitmap, max: Int = 320): Bitmap {
+                  val r = max.toFloat() / maxOf(b.width, b.height)
+                  if (r >= 1f) return b
+                  val w = (b.width * r).toInt().coerceAtLeast(1)
+                  val h = (b.height * r).toInt().coerceAtLeast(1)
+                  return Bitmap.createScaledBitmap(b, w, h, true)
+              }
+
+              private fun loadArt(ctx: Context, md: MediaMetadata?): Bitmap? {
+                  if (md == null) return null
+                  val direct = md.getBitmap(MediaMetadata.METADATA_KEY_ART)
+                      ?: md.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+                      ?: md.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
+                  if (direct != null) return direct
+                  val uriStr = md.getString(MediaMetadata.METADATA_KEY_ART_URI)
+                      ?: md.getString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI)
+                      ?: md.getString(MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI)
+                      ?: return null
+                  if (uriStr == artKey) return artBmp
+                  artKey = uriStr
+                  artBmp = null
+                  Thread {
+                      val bmp: Bitmap? = try {
+                          val u = Uri.parse(uriStr)
+                          if (u.scheme == "http" || u.scheme == "https") {
+                              val conn = URL(uriStr).openConnection() as HttpURLConnection
+                              conn.connectTimeout = 8000
+                              conn.readTimeout = 8000
+                              conn.inputStream.use { BitmapFactory.decodeStream(it) }
+                          } else {
+                              ctx.contentResolver.openInputStream(u)?.use { BitmapFactory.decodeStream(it) }
+                          }
+                      } catch (e: Exception) {
+                          null
+                      }
+                      if (bmp != null && artKey == uriStr) {
+                          artBmp = bmp
+                          update(ctx)
+                      }
+                  }.start()
+                  return null
+              }
+
+              private fun albumTracks(ctx: Context, album: String, currentTitle: String?): List<Track> {
+                  val out = mutableListOf<Track>()
+                  try {
+                      val base = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                      val proj = arrayOf(
+                          MediaStore.Audio.Media._ID,
+                          MediaStore.Audio.Media.TITLE,
+                          MediaStore.Audio.Media.ARTIST
+                      )
+                      val sel = "${MediaStore.Audio.Media.ALBUM} = ? AND ${MediaStore.Audio.Media.IS_MUSIC} != 0"
+                      val order = "${MediaStore.Audio.Media.TRACK} ASC"
+                      ctx.contentResolver.query(base, proj, sel, arrayOf(album), order)?.use { cur ->
+                          var i = 0
+                          while (cur.moveToNext()) {
+                              i++
+                              val id = cur.getLong(0)
+                              val t = cur.getString(1) ?: ""
+                              val a = cur.getString(2) ?: ""
+                              val uri = ContentUris.withAppendedId(base, id).toString()
+                              out.add(Track(t, a, i, t == currentTitle, -1L, uri))
+                          }
+                      }
+                  } catch (e: Exception) {
+                  }
+                  return out
+              }
+
+              fun listing(ctx: Context, c: MediaController?): Listing {
+                  val md = c?.metadata
+                  val q = c?.queue
+                  if (c != null && !q.isNullOrEmpty()) {
+                      val activeId = c.playbackState?.activeQueueItemId ?: -1L
+                      var idx = -1
+                      val tracks = q.mapIndexed { i, item ->
+                          val cur = item.queueId == activeId
+                          if (cur) idx = i
+                          Track(
+                              item.description.title?.toString() ?: "",
+                              item.description.subtitle?.toString() ?: "",
+                              i + 1, cur, item.queueId, null
+                          )
+                      }
+                      val pos = if (idx >= 0) (idx + 1).toString() else "-"
+                      return Listing("現在のキュー ($pos/${q.size})", tracks, false)
+                  }
+                  if (md != null) {
+                      val album = md.getString(MediaMetadata.METADATA_KEY_ALBUM)
+                      if (!album.isNullOrBlank()) {
+                          val title = md.getString(MediaMetadata.METADATA_KEY_TITLE)
+                          val tracks = albumTracks(ctx, album, title)
+                          if (tracks.isNotEmpty()) {
+                              val idx = tracks.indexOfFirst { it.current }
+                              val pos = if (idx >= 0) (idx + 1).toString() else "-"
+                              return Listing("$album ($pos/${tracks.size})", tracks, true)
+                          }
+                      }
+                  }
+                  return Listing("", emptyList(), false)
+              }
+
+              fun update(ctx: Context, playingOverride: Boolean? = null) {
+                  val app = ctx.applicationContext
+                  val mgr = AppWidgetManager.getInstance(app)
+                  val ids = mgr.getAppWidgetIds(ComponentName(app, NowPlayingWidget::class.java))
                   if (ids.isEmpty()) return
 
-                  val c = activeController(ctx)
+                  val c = activeController(app)
                   val md = c?.metadata
                   val title = md?.getString(MediaMetadata.METADATA_KEY_TITLE)
                   val artist = md?.getString(MediaMetadata.METADATA_KEY_ARTIST)
                       ?: md?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
-                  val art = (md?.getBitmap(MediaMetadata.METADATA_KEY_ART)
-                      ?: md?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART))
-                      ?.let { Bitmap.createScaledBitmap(it, 256, 256, true) }
-                  val playing = c?.playbackState?.state == PlaybackState.STATE_PLAYING
+                  val art = loadArt(app, md)?.let { scaled(it) }
+                  val playing = playingOverride ?: (c != null && isPlaying(c))
+                  val l = listing(app, c)
 
-                  val queue = c?.queue
-                  val activeId = c?.playbackState?.activeQueueItemId ?: -1L
-                  val idx = queue?.indexOfFirst { it.queueId == activeId } ?: -1
-
-                  val rv = RemoteViews(ctx.packageName, R.layout.widget)
+                  val rv = RemoteViews(app.packageName, R.layout.widget)
                   rv.setTextViewText(R.id.title, title ?: "再生中の曲なし")
                   rv.setTextViewText(R.id.artist, artist ?: "")
                   if (art != null) rv.setImageViewBitmap(R.id.art, art)
@@ -463,19 +630,29 @@ jobs:
                       R.id.play,
                       if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
                   )
-                  rv.setOnClickPendingIntent(R.id.prev, pi(ctx, ACTION_PREV))
-                  rv.setOnClickPendingIntent(R.id.play, pi(ctx, ACTION_PLAY))
-                  rv.setOnClickPendingIntent(R.id.next, pi(ctx, ACTION_NEXT))
-                  c?.sessionActivity?.let { rv.setOnClickPendingIntent(R.id.art, it) }
+                  rv.setOnClickPendingIntent(R.id.prev, pi(app, ACTION_PREV))
+                  rv.setOnClickPendingIntent(R.id.play, pi(app, ACTION_PLAY))
+                  rv.setOnClickPendingIntent(R.id.next, pi(app, ACTION_NEXT))
 
-                  rv.setTextViewText(
-                      R.id.queue_header,
-                      if (queue.isNullOrEmpty()) "" else "現在のキュー (${if (idx >= 0) idx + 1 else "-"}/${queue.size})"
-                  )
-                  rv.setRemoteAdapter(R.id.queue_list, Intent(ctx, QueueService::class.java))
+                  val openPi: PendingIntent? = c?.sessionActivity
+                      ?: c?.packageName?.let { pkg ->
+                          app.packageManager.getLaunchIntentForPackage(pkg)?.let {
+                              PendingIntent.getActivity(app, 4, it, PendingIntent.FLAG_IMMUTABLE)
+                          }
+                      }
+                  if (openPi != null) {
+                      for (id in listOf(R.id.root, R.id.art, R.id.title, R.id.artist, R.id.queue_header, R.id.empty)) {
+                          rv.setOnClickPendingIntent(id, openPi)
+                      }
+                  }
+
+                  rv.setTextViewText(R.id.queue_header, l.header)
+                  rv.setRemoteAdapter(R.id.queue_list, Intent(app, QueueService::class.java))
                   rv.setEmptyView(R.id.queue_list, R.id.empty)
-                  rv.setPendingIntentTemplate(R.id.queue_list, pickTemplate(ctx))
-                  if (idx >= 0) rv.setScrollPosition(R.id.queue_list, idx)
+                  val template = if (l.album && c != null) viewTemplate(app, c.packageName) else pickTemplate(app)
+                  rv.setPendingIntentTemplate(R.id.queue_list, template)
+                  val cur = l.tracks.indexOfFirst { it.current }
+                  if (cur >= 0) rv.setScrollPosition(R.id.queue_list, cur)
 
                   mgr.updateAppWidget(ids, rv)
                   mgr.notifyAppWidgetViewDataChanged(ids, R.id.queue_list)
@@ -489,7 +666,8 @@ jobs:
           import android.appwidget.AppWidgetProvider
           import android.content.Context
           import android.content.Intent
-          import android.media.session.PlaybackState
+          import android.os.Handler
+          import android.os.Looper
 
           class NowPlayingWidget : AppWidgetProvider() {
               override fun onUpdate(context: Context, mgr: AppWidgetManager, ids: IntArray) {
@@ -498,19 +676,33 @@ jobs:
 
               override fun onReceive(context: Context, intent: Intent) {
                   super.onReceive(context, intent)
+                  val action = intent.action ?: return
+                  if (action != WidgetUpdater.ACTION_PREV && action != WidgetUpdater.ACTION_NEXT &&
+                      action != WidgetUpdater.ACTION_PLAY && action != WidgetUpdater.ACTION_PICK
+                  ) return
                   val c = WidgetUpdater.activeController(context) ?: return
-                  when (intent.action) {
+
+                  var forced: Boolean? = null
+                  when (action) {
                       WidgetUpdater.ACTION_PREV -> c.transportControls.skipToPrevious()
                       WidgetUpdater.ACTION_NEXT -> c.transportControls.skipToNext()
-                      WidgetUpdater.ACTION_PLAY ->
-                          if (c.playbackState?.state == PlaybackState.STATE_PLAYING)
-                              c.transportControls.pause()
-                          else c.transportControls.play()
+                      WidgetUpdater.ACTION_PLAY -> {
+                          val playing = WidgetUpdater.isPlaying(c)
+                          if (playing) c.transportControls.pause() else c.transportControls.play()
+                          forced = !playing
+                      }
                       WidgetUpdater.ACTION_PICK -> {
                           val id = intent.getLongExtra("id", -1L)
                           if (id >= 0) c.transportControls.skipToQueueItem(id)
                       }
                   }
+
+                  WidgetUpdater.update(context, forced)
+                  val pending = goAsync()
+                  Handler(Looper.getMainLooper()).postDelayed({
+                      WidgetUpdater.update(context)
+                      pending.finish()
+                  }, 700)
               }
           }
           EOF
@@ -520,7 +712,7 @@ jobs:
           import android.content.Context
           import android.content.Intent
           import android.media.MediaMetadata
-          import android.media.session.MediaSession
+          import android.net.Uri
           import android.widget.RemoteViews
           import android.widget.RemoteViewsService
 
@@ -528,16 +720,14 @@ jobs:
               override fun onGetViewFactory(intent: Intent): RemoteViewsFactory = Factory(applicationContext)
 
               private class Factory(val ctx: Context) : RemoteViewsFactory {
-                  var items: List<MediaSession.QueueItem> = emptyList()
-                  var activeId = -1L
+                  var items: List<Track> = emptyList()
                   var duration = 0L
 
                   override fun onCreate() {}
 
                   override fun onDataSetChanged() {
                       val c = WidgetUpdater.activeController(ctx)
-                      items = c?.queue ?: emptyList()
-                      activeId = c?.playbackState?.activeQueueItemId ?: -1L
+                      items = WidgetUpdater.listing(ctx, c).tracks
                       duration = c?.metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
                   }
 
@@ -547,14 +737,15 @@ jobs:
 
                   override fun getViewAt(position: Int): RemoteViews {
                       val rv = RemoteViews(ctx.packageName, R.layout.widget_item)
-                      val q = items.getOrNull(position) ?: return rv
-                      val cur = q.queueId == activeId
-                      val d = q.description
-                      rv.setTextViewText(R.id.num, if (cur) "▶" else "${position + 1}")
-                      rv.setTextViewText(R.id.q_title, d.title ?: "")
-                      rv.setTextViewText(R.id.q_artist, d.subtitle ?: "")
-                      rv.setTextViewText(R.id.q_dur, if (cur && duration > 0) fmt(duration) else "")
-                      rv.setOnClickFillInIntent(R.id.item_root, Intent().putExtra("id", q.queueId))
+                      val t = items.getOrNull(position) ?: return rv
+                      rv.setTextViewText(R.id.num, if (t.current) "▶" else "${t.num}")
+                      rv.setTextViewText(R.id.q_title, t.title)
+                      rv.setTextViewText(R.id.q_artist, t.artist)
+                      rv.setTextViewText(R.id.q_dur, if (t.current && duration > 0) fmt(duration) else "")
+                      val fill = Intent()
+                      if (t.uri != null) fill.setDataAndType(Uri.parse(t.uri), "audio/*")
+                      else fill.putExtra("id", t.queueId)
+                      rv.setOnClickFillInIntent(R.id.item_root, fill)
                       return rv
                   }
 
