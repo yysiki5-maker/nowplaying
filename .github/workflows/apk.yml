@@ -866,25 +866,6 @@ jobs:
 
                   val rv = RemoteViews(app.packageName, R.layout.widget)
                   rv.setTextViewText(R.id.title, title ?: "再生中の曲なし")
-                  val titleStr = title ?: "再生中の曲なし"
-                  val density = app.resources.displayMetrics.density
-                  val wDp = try { mgr.getAppWidgetOptions(ids[0]).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 340) } catch (e: Exception) { 340 }
-                  val availPx = ((wDp - 174).coerceAtLeast(60)) * density
-                  val tp = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-                  tp.typeface = android.graphics.Typeface.DEFAULT_BOLD
-                  var tsp = 26f
-                  tp.textSize = tsp * density
-                  if (tp.measureText(titleStr) > availPx * 0.98f) {
-                      var lo = 15f
-                      var hi = 26f
-                      while (hi - lo > 0.5f) {
-                          val mid = (lo + hi) / 2f
-                          tp.textSize = mid * density
-                          if (tp.measureText(titleStr) <= availPx * 0.98f) lo = mid else hi = mid
-                      }
-                      tsp = lo
-                  }
-                  rv.setTextViewTextSize(R.id.title, android.util.TypedValue.COMPLEX_UNIT_SP, tsp)
                   rv.setTextViewText(R.id.artist, artist ?: "")
                   if (art != null) rv.setImageViewBitmap(R.id.art, art)
                   else rv.setImageViewResource(R.id.art, android.R.drawable.ic_media_play)
