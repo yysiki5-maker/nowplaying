@@ -178,7 +178,7 @@ jobs:
                           android:shadowDy="2"
                           android:shadowRadius="6"
                           android:singleLine="true"
-                          android:textColor="#FFFFFF"
+                          android:textColor="#CCFFFFFF"
                           android:textSize="26sp"
                           android:textStyle="bold" />
           
@@ -341,7 +341,7 @@ jobs:
                           android:shadowDy="2"
                           android:shadowRadius="6"
                           android:singleLine="true"
-                          android:textColor="#FFFFFF"
+                          android:textColor="#CCFFFFFF"
                           android:textSize="21sp"
                           android:textStyle="bold" />
           
@@ -504,7 +504,7 @@ jobs:
                           android:shadowDy="2"
                           android:shadowRadius="6"
                           android:singleLine="true"
-                          android:textColor="#FFFFFF"
+                          android:textColor="#CCFFFFFF"
                           android:textSize="16sp"
                           android:textStyle="bold" />
           
@@ -609,10 +609,10 @@ jobs:
               <path
                   android:fillColor="@android:color/transparent"
                   android:strokeColor="#FFFFFF"
-                  android:strokeWidth="1.7"
+                  android:strokeWidth="1.0"
                   android:strokeLineCap="round"
                   android:strokeLineJoin="round"
-                  android:pathData="M8.5,5.8 L18.5,12 L8.5,18.2 Z" />
+                  android:pathData="M5.3,5.1 L6.24,4.56 Q5.3,4 17.76,11.44 Q18.7,12 17.76,12.56 L6.24,19.44 Q5.3,20 5.3,18.9 Z" />
           </vector>
           EOF
           cat > app/src/main/res/drawable/ic_pause.xml <<'EOF'
@@ -625,10 +625,10 @@ jobs:
               <path
                   android:fillColor="@android:color/transparent"
                   android:strokeColor="#FFFFFF"
-                  android:strokeWidth="2.6"
+                  android:strokeWidth="1.0"
                   android:strokeLineCap="round"
                   android:strokeLineJoin="round"
-                  android:pathData="M8.5,6 L8.5,18 M15.5,6 L15.5,18" />
+                  android:pathData="M8.54,5.07 L9.1,5.07 Q10.7,5.07 10.7,6.67 L10.7,17.33 Q10.7,18.93 9.1,18.93 L8.54,18.93 Q6.94,18.93 6.94,17.33 L6.94,6.67 Q6.94,5.07 8.54,5.07 Z M14.9,5.07 L15.46,5.07 Q17.06,5.07 17.06,6.67 L17.06,17.33 Q17.06,18.93 15.46,18.93 L14.9,18.93 Q13.3,18.93 13.3,17.33 L13.3,6.67 Q13.3,5.07 14.9,5.07 Z" />
           </vector>
           EOF
           cat > app/src/main/res/drawable/ic_next.xml <<'EOF'
@@ -641,10 +641,10 @@ jobs:
               <path
                   android:fillColor="@android:color/transparent"
                   android:strokeColor="#FFFFFF"
-                  android:strokeWidth="1.7"
+                  android:strokeWidth="1.0"
                   android:strokeLineCap="round"
                   android:strokeLineJoin="round"
-                  android:pathData="M6,6.2 L13.5,12 L6,17.8 Z M17.5,6 L17.5,18" />
+                  android:pathData="M14.14,11.49 L4.76,5.91 Q3.9,5.4 3.9,6.4 L3.9,17.6 Q3.9,18.6 4.76,18.09 Q15,12 14.14,12.51 Z M18.5,5.07 L17.94,5.07 Q16.34,5.07 16.34,6.67 L16.34,17.33 Q16.34,18.93 17.94,18.93 L18.5,18.93 Q20.1,18.93 20.1,17.33 L20.1,6.67 Q20.1,5.07 18.5,5.07 Z" />
           </vector>
           EOF
           cat > app/src/main/res/drawable/ic_prev.xml <<'EOF'
@@ -657,10 +657,10 @@ jobs:
               <path
                   android:fillColor="@android:color/transparent"
                   android:strokeColor="#FFFFFF"
-                  android:strokeWidth="1.7"
+                  android:strokeWidth="1.0"
                   android:strokeLineCap="round"
                   android:strokeLineJoin="round"
-                  android:pathData="M18,6.2 L10.5,12 L18,17.8 Z M6.5,6 L6.5,18" />
+                  android:pathData="M9.86,11.49 L19.24,5.91 Q20.1,5.4 20.1,6.4 L20.1,17.6 Q20.1,18.6 19.24,18.09 Q9,12 9.86,12.51 Z M5.5,5.07 L6.06,5.07 Q7.66,5.07 7.66,6.67 L7.66,17.33 Q7.66,18.93 6.06,18.93 L5.5,18.93 Q3.9,18.93 3.9,17.33 L3.9,6.67 Q3.9,5.07 5.5,5.07 Z" />
           </vector>
           EOF
           cat > app/src/main/res/drawable/bg_circle.xml <<'EOF'
