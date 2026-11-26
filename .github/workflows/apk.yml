@@ -1,4 +1,4 @@
-name: Build APK v9
+name: Build APK v11
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -70,12 +70,7 @@ jobs:
                   android:label="Now Playing Widget"
                   android:theme="@android:style/Theme.DeviceDefault.Light">
 
-                  <activity android:name=".MainActivity" android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
+                  <activity android:name=".MainActivity" android:exported="true" />
 
                   <receiver android:name=".NowPlayingWidget" android:exported="true">
                       <intent-filter>
@@ -122,132 +117,157 @@ jobs:
               android:layout_width="match_parent"
               android:layout_height="match_parent"
               android:orientation="vertical"
-              android:padding="8dp">
-
+              android:padding="10dp">
+          
+              <TextView
+                  android:id="@+id/header"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_marginBottom="10dp"
+                  android:letterSpacing="0.35"
+                  android:shadowColor="#99000000"
+                  android:shadowDy="2"
+                  android:shadowRadius="6"
+                  android:text="NOW PLAYING"
+                  android:textColor="#E6FFFFFF"
+                  android:textSize="13sp" />
+          
               <LinearLayout
                   android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:gravity="center_vertical"
+                  android:layout_height="0dp"
+                  android:layout_weight="1"
                   android:orientation="horizontal">
-
+          
                   <FrameLayout
-                      android:layout_width="104dp"
-                      android:layout_height="104dp">
-
+                      android:layout_width="142dp"
+                      android:layout_height="104dp"
+                      android:layout_gravity="top">
+          
+                      <ImageView
+                          android:id="@+id/disc"
+                          android:layout_width="104dp"
+                          android:layout_height="104dp"
+                          android:layout_gravity="end|center_vertical"
+                          android:scaleType="fitCenter" />
+          
                       <ImageView
                           android:id="@+id/art"
-                          android:layout_width="match_parent"
-                          android:layout_height="match_parent"
+                          android:layout_width="104dp"
+                          android:layout_height="104dp"
+                          android:layout_gravity="start|center_vertical"
                           android:scaleType="fitCenter" />
-
                   </FrameLayout>
-
+          
                   <LinearLayout
                       android:layout_width="0dp"
-                      android:layout_height="wrap_content"
+                      android:layout_height="match_parent"
                       android:layout_marginStart="12dp"
                       android:layout_weight="1"
                       android:orientation="vertical">
-
+          
                       <TextView
                           android:id="@+id/title"
                           android:layout_width="match_parent"
                           android:layout_height="wrap_content"
                           android:ellipsize="end"
-                          android:gravity="center"
+                          android:gravity="start"
                           android:shadowColor="#99000000"
                           android:shadowDy="2"
                           android:shadowRadius="6"
                           android:singleLine="true"
                           android:textColor="#FFFFFF"
-                          android:textSize="20sp"
+                          android:textSize="26sp"
                           android:textStyle="bold" />
-
+          
                       <TextView
                           android:id="@+id/artist"
                           android:layout_width="match_parent"
                           android:layout_height="wrap_content"
                           android:ellipsize="end"
-                          android:gravity="center"
+                          android:gravity="start"
                           android:shadowColor="#99000000"
                           android:shadowDy="2"
                           android:shadowRadius="6"
                           android:singleLine="true"
-                          android:textColor="#E6FFFFFF"
+                          android:textColor="#CCFFFFFF"
                           android:textSize="17sp" />
-
-                      <LinearLayout
+          
+                      <View
                           android:layout_width="match_parent"
+                          android:layout_height="1dp"
+                          android:layout_marginBottom="8dp"
+                          android:layout_marginTop="12dp"
+                          android:background="#2EFFFFFF" />
+          
+                      <TextView
+                          android:id="@+id/queue_header"
+                          android:layout_width="wrap_content"
                           android:layout_height="wrap_content"
-                          android:layout_marginTop="4dp"
-                          android:orientation="horizontal">
-
-                          <ImageButton
-                              android:id="@+id/prev"
-                              android:layout_width="0dp"
-                              android:layout_height="44dp"
-                              android:layout_weight="1"
-                              android:background="@android:color/transparent"
-                          android:padding="12dp"
-                              android:src="@drawable/ic_prev" />
-
-                          <ImageButton
-                              android:id="@+id/play"
-                              android:layout_width="0dp"
-                              android:layout_height="44dp"
-                              android:layout_weight="1"
-                              android:background="@android:color/transparent"
-                          android:padding="12dp"
-                              android:src="@drawable/ic_play" />
-
-                          <ImageButton
-                              android:id="@+id/next"
-                              android:layout_width="0dp"
-                              android:layout_height="44dp"
-                              android:layout_weight="1"
-                              android:background="@android:color/transparent"
-                          android:padding="12dp"
-                              android:src="@drawable/ic_next" />
-                      </LinearLayout>
+                          android:letterSpacing="0.3"
+                          android:shadowColor="#99000000"
+                          android:shadowDy="2"
+                          android:shadowRadius="6"
+                          android:text="TRACK LIST"
+                          android:textColor="#CCFFFFFF"
+                          android:textSize="12sp" />
+          
+                      <FrameLayout
+                          android:layout_width="match_parent"
+                          android:layout_height="0dp"
+                          android:layout_marginTop="6dp"
+                          android:layout_weight="1">
+          
+                          <ListView
+                              android:id="@+id/queue_list"
+                              android:layout_width="match_parent"
+                              android:layout_height="match_parent"
+                              android:divider="@null"
+                              android:scrollbars="none" />
+          
+                          <TextView
+                              android:id="@+id/empty"
+                              android:layout_width="match_parent"
+                              android:layout_height="match_parent"
+                              android:gravity="center"
+                              android:text=""
+                              android:textSize="14sp" />
+                      </FrameLayout>
                   </LinearLayout>
               </LinearLayout>
-
-              <TextView
-                  android:id="@+id/queue_header"
+          
+              <LinearLayout
                   android:layout_width="match_parent"
                   android:layout_height="wrap_content"
-                  android:layout_marginTop="12dp"
+                  android:layout_marginTop="8dp"
                   android:gravity="center"
-                  android:shadowColor="#99000000"
-                  android:shadowDy="2"
-                  android:shadowRadius="6"
-                  android:textColor="#CCFFFFFF"
-                  android:textSize="15sp" />
-
-              <FrameLayout
-                  android:layout_width="match_parent"
-                  android:layout_height="0dp"
-                  android:layout_weight="1">
-
-                  <ListView
-                      android:id="@+id/queue_list"
-                      android:layout_width="match_parent"
-                      android:layout_height="match_parent"
-                      android:divider="@null"
-                      android:scrollbars="none" />
-
-                  <TextView
-                      android:id="@+id/empty"
-                      android:layout_width="match_parent"
-                      android:layout_height="match_parent"
-                      android:gravity="center"
-                      android:shadowColor="#99000000"
-                      android:shadowDy="2"
-                      android:shadowRadius="6"
-                      android:text="キューなし"
-                      android:textColor="#99FFFFFF"
-                      android:textSize="14sp" />
-              </FrameLayout>
+                  android:orientation="horizontal">
+          
+                  <ImageButton
+                      android:id="@+id/prev"
+                      android:layout_width="52dp"
+                      android:layout_height="52dp"
+                      android:background="@android:color/transparent"
+                      android:padding="13dp"
+                      android:src="@drawable/ic_prev" />
+          
+                  <ImageButton
+                      android:id="@+id/play"
+                      android:layout_width="56dp"
+                      android:layout_height="56dp"
+                      android:layout_marginStart="18dp"
+                      android:layout_marginEnd="18dp"
+                      android:background="@drawable/bg_circle"
+                      android:padding="15dp"
+                      android:src="@drawable/ic_play" />
+          
+                  <ImageButton
+                      android:id="@+id/next"
+                      android:layout_width="52dp"
+                      android:layout_height="52dp"
+                      android:background="@android:color/transparent"
+                      android:padding="13dp"
+                      android:src="@drawable/ic_next" />
+              </LinearLayout>
           </LinearLayout>
           EOF
           cat > app/src/main/res/drawable/ic_play.xml <<'EOF'
@@ -298,6 +318,16 @@ jobs:
                   android:pathData="M6,6h2v12H6zM18,6l-8.5,6L18,18z" />
           </vector>
           EOF
+          cat > app/src/main/res/drawable/bg_circle.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android"
+              android:shape="oval">
+              <stroke
+                  android:width="1.5dp"
+                  android:color="#E6FFFFFF" />
+              <solid android:color="@android:color/transparent" />
+          </shape>
+          EOF
           cat > app/src/main/res/layout/widget_item.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -306,64 +336,36 @@ jobs:
               android:layout_height="wrap_content"
               android:gravity="center_vertical"
               android:orientation="horizontal"
-              android:paddingBottom="8dp"
-              android:paddingEnd="12dp"
-              android:paddingStart="4dp"
-              android:paddingTop="8dp">
-
+              android:paddingBottom="7dp"
+              android:paddingEnd="8dp"
+              android:paddingStart="2dp"
+              android:paddingTop="7dp">
+          
               <TextView
                   android:id="@+id/num"
-                  android:layout_width="36dp"
+                  android:layout_width="34dp"
                   android:layout_height="wrap_content"
-                  android:gravity="center"
+                  android:gravity="start"
                   android:shadowColor="#99000000"
                   android:shadowDy="2"
                   android:shadowRadius="6"
-                  android:textColor="#CCFFFFFF"
-                  android:textSize="16sp" />
-
-              <LinearLayout
+                  android:textColor="#99FFFFFF"
+                  android:textSize="15sp" />
+          
+              <TextView
+                  android:id="@+id/q_title"
                   android:layout_width="0dp"
                   android:layout_height="wrap_content"
-                  android:layout_marginStart="8dp"
+                  android:layout_marginStart="6dp"
                   android:layout_weight="1"
-                  android:orientation="vertical">
-
-                  <TextView
-                      android:id="@+id/q_title"
-                      android:layout_width="match_parent"
-                      android:layout_height="wrap_content"
-                      android:ellipsize="end"
-                      android:shadowColor="#99000000"
-                      android:shadowDy="2"
-                      android:shadowRadius="6"
-                      android:singleLine="true"
-                      android:textColor="#FFFFFF"
-                      android:textSize="16sp" />
-
-                  <TextView
-                      android:id="@+id/q_artist"
-                      android:layout_width="match_parent"
-                      android:layout_height="wrap_content"
-                      android:ellipsize="end"
-                      android:shadowColor="#99000000"
-                      android:shadowDy="2"
-                      android:shadowRadius="6"
-                      android:singleLine="true"
-                      android:textColor="#CCFFFFFF"
-                      android:textSize="13sp" />
-              </LinearLayout>
-
-              <TextView
-                  android:id="@+id/q_dur"
-                  android:layout_width="wrap_content"
-                  android:layout_height="wrap_content"
-                  android:layout_marginStart="8dp"
+                  android:ellipsize="end"
                   android:shadowColor="#99000000"
                   android:shadowDy="2"
                   android:shadowRadius="6"
-                  android:textColor="#CCFFFFFF"
-                  android:textSize="14sp" />
+                  android:singleLine="true"
+                  android:textColor="#FFFFFF"
+                  android:textSize="16sp"
+                  android:textStyle="bold" />
           </LinearLayout>
           EOF
           cat > app/src/main/java/com/example/nowplaying/MainActivity.kt <<'EOF'
@@ -602,6 +604,44 @@ jobs:
                   return out
               }
 
+              private var discBmp: Bitmap? = null
+
+              private fun discBitmap(): Bitmap {
+                  discBmp?.let { return it }
+                  val size = 416
+                  val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+                  val cv = android.graphics.Canvas(bmp)
+                  val cx = size / 2f
+                  val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                  paint.style = android.graphics.Paint.Style.FILL
+                  paint.color = android.graphics.Color.rgb(12, 12, 14)
+                  cv.drawCircle(cx, cx, cx - 2f, paint)
+                  paint.style = android.graphics.Paint.Style.STROKE
+                  paint.strokeWidth = 2f
+                  var gi = 0
+                  for (r in 94..194 step 9) {
+                      paint.color = android.graphics.Color.argb(if (gi % 2 == 0) 30 else 15, 255, 255, 255)
+                      cv.drawCircle(cx, cx, r.toFloat(), paint)
+                      gi++
+                  }
+                  paint.strokeWidth = 30f
+                  paint.color = android.graphics.Color.argb(15, 255, 255, 255)
+                  val arcRect = android.graphics.RectF(34f, 34f, size - 34f, size - 34f)
+                  cv.drawArc(arcRect, 205f, 55f, false, paint)
+                  cv.drawArc(arcRect, 25f, 55f, false, paint)
+                  paint.style = android.graphics.Paint.Style.FILL
+                  paint.color = android.graphics.Color.rgb(40, 40, 45)
+                  cv.drawCircle(cx, cx, 64f, paint)
+                  paint.color = android.graphics.Color.rgb(8, 8, 8)
+                  cv.drawCircle(cx, cx, 7f, paint)
+                  paint.style = android.graphics.Paint.Style.STROKE
+                  paint.strokeWidth = 2f
+                  paint.color = android.graphics.Color.argb(70, 255, 255, 255)
+                  cv.drawCircle(cx, cx, cx - 3f, paint)
+                  discBmp = bmp
+                  return bmp
+              }
+
               private fun loadArt(ctx: Context, md: MediaMetadata?): Bitmap? {
                   if (md == null) return null
                   val direct = md.getBitmap(MediaMetadata.METADATA_KEY_ART)
@@ -732,7 +772,7 @@ jobs:
                   when {
                       t.queueId >= 0 && (actions and PlaybackState.ACTION_SKIP_TO_QUEUE_ITEM) != 0L ->
                           c.transportControls.skipToQueueItem(t.queueId)
-                      t.ucrtId != null && (actions and PlaybackState.ACTION_PLAY_FROM_MEDIA_ID) != 0L ->
+                      t.ucrtId != null && c.packageName == "com.uyatame.cdripper" && (actions and PlaybackState.ACTION_PLAY_FROM_MEDIA_ID) != 0L ->
                           c.transportControls.playFromMediaId(t.ucrtId, null)
                       t.uri != null && (actions and PlaybackState.ACTION_PLAY_FROM_URI) != 0L ->
                           c.transportControls.playFromUri(Uri.parse(t.uri), null)
@@ -809,6 +849,7 @@ jobs:
                   rv.setTextViewText(R.id.artist, artist ?: "")
                   if (art != null) rv.setImageViewBitmap(R.id.art, art)
                   else rv.setImageViewResource(R.id.art, android.R.drawable.ic_media_play)
+                  rv.setImageViewBitmap(R.id.disc, discBitmap())
                   rv.setImageViewResource(
                       R.id.play,
                       if (playing) R.drawable.ic_pause else R.drawable.ic_play
@@ -823,13 +864,17 @@ jobs:
                               PendingIntent.getActivity(app, 4, it, PendingIntent.FLAG_IMMUTABLE)
                           }
                       }
-                  if (openPi != null) {
-                      for (id in listOf(R.id.root, R.id.art, R.id.title, R.id.artist, R.id.queue_header, R.id.empty)) {
-                          rv.setOnClickPendingIntent(id, openPi)
-                      }
+                  val settingsPi = PendingIntent.getActivity(
+                      app, 5,
+                      Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                      PendingIntent.FLAG_IMMUTABLE
+                  )
+                  val tapPi = openPi ?: settingsPi
+                  for (id in listOf(R.id.root, R.id.art, R.id.disc, R.id.header, R.id.title, R.id.artist, R.id.queue_header, R.id.empty)) {
+                      rv.setOnClickPendingIntent(id, tapPi)
                   }
 
-                  rv.setTextViewText(R.id.queue_header, l.header)
+                  rv.setTextViewText(R.id.queue_header, "TRACK LIST")
                   rv.setRemoteAdapter(R.id.queue_list, Intent(app, QueueService::class.java))
                   rv.setEmptyView(R.id.queue_list, R.id.empty)
                   val template = if (l.album) uriTemplate(app) else pickTemplate(app)
@@ -939,8 +984,6 @@ jobs:
                       val t = items.getOrNull(position) ?: return rv
                       rv.setTextViewText(R.id.num, if (t.current) "▶" else "${t.num}")
                       rv.setTextViewText(R.id.q_title, t.title)
-                      rv.setTextViewText(R.id.q_artist, t.artist)
-                      rv.setTextViewText(R.id.q_dur, if (t.current && duration > 0) fmt(duration) else "")
                       val fill = Intent()
                       fill.putExtra("title", t.title)
                       if (t.ucrtId != null) fill.putExtra("ucrt", t.ucrtId)
