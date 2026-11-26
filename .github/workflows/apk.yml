@@ -138,6 +138,7 @@ jobs:
                   android:layout_weight="1"
                   android:orientation="horizontal">
           
+                  <LinearLayout android:layout_width="142dp" android:layout_height="wrap_content" android:layout_gravity="top" android:orientation="vertical">
                   <FrameLayout
                       android:layout_width="142dp"
                       android:layout_height="104dp"
@@ -157,6 +158,8 @@ jobs:
                           android:layout_gravity="start|center_vertical"
                           android:scaleType="fitCenter" />
                   </FrameLayout>
+                      <TextView android:id="@+id/album_name" android:layout_width="142dp" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:ellipsize="end" android:gravity="center" android:shadowColor="#99000000" android:shadowDy="2" android:shadowRadius="6" android:singleLine="true" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                  </LinearLayout>
           
                   <LinearLayout
                       android:layout_width="0dp"
@@ -244,28 +247,354 @@ jobs:
           
                   <ImageButton
                       android:id="@+id/prev"
-                      android:layout_width="44dp"
-                      android:layout_height="44dp"
+                      android:layout_width="36dp"
+                      android:layout_height="36dp"
                       android:background="@android:color/transparent"
-                      android:padding="11dp"
+                      android:padding="9dp"
                       android:src="@drawable/ic_prev" />
           
                   <ImageButton
                       android:id="@+id/play"
-                      android:layout_width="48dp"
-                      android:layout_height="48dp"
-                      android:layout_marginStart="14dp"
-                      android:layout_marginEnd="14dp"
+                      android:layout_width="40dp"
+                      android:layout_height="40dp"
+                      android:layout_marginStart="10dp"
+                      android:layout_marginEnd="10dp"
                       android:background="@drawable/bg_circle"
-                      android:padding="13dp"
+                      android:padding="11dp"
                       android:src="@drawable/ic_play" />
           
                   <ImageButton
                       android:id="@+id/next"
-                      android:layout_width="44dp"
-                      android:layout_height="44dp"
+                      android:layout_width="36dp"
+                      android:layout_height="36dp"
                       android:background="@android:color/transparent"
+                      android:padding="9dp"
+                      android:src="@drawable/ic_next" />
+              </LinearLayout>
+          </LinearLayout>
+          EOF
+          cat > app/src/main/res/layout/widget_t21.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/root"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:padding="10dp">
+          
+              <TextView
+                  android:id="@+id/header"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_marginBottom="10dp"
+                  android:letterSpacing="0.35"
+                  android:shadowColor="#99000000"
+                  android:shadowDy="2"
+                  android:shadowRadius="6"
+                  android:text="NOW PLAYING"
+                  android:textColor="#E6FFFFFF"
+                  android:textSize="13sp" />
+          
+              <LinearLayout
+                  android:layout_width="match_parent"
+                  android:layout_height="0dp"
+                  android:layout_weight="1"
+                  android:orientation="horizontal">
+          
+                  <LinearLayout android:layout_width="142dp" android:layout_height="wrap_content" android:layout_gravity="top" android:orientation="vertical">
+                  <FrameLayout
+                      android:layout_width="142dp"
+                      android:layout_height="104dp"
+                      android:layout_gravity="top">
+          
+                      <ImageView
+                          android:id="@+id/disc"
+                          android:layout_width="104dp"
+                          android:layout_height="104dp"
+                          android:layout_gravity="end|center_vertical"
+                          android:scaleType="fitCenter" />
+          
+                      <ImageView
+                          android:id="@+id/art"
+                          android:layout_width="104dp"
+                          android:layout_height="104dp"
+                          android:layout_gravity="start|center_vertical"
+                          android:scaleType="fitCenter" />
+                  </FrameLayout>
+                      <TextView android:id="@+id/album_name" android:layout_width="142dp" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:ellipsize="end" android:gravity="center" android:shadowColor="#99000000" android:shadowDy="2" android:shadowRadius="6" android:singleLine="true" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                  </LinearLayout>
+          
+                  <LinearLayout
+                      android:layout_width="0dp"
+                      android:layout_height="match_parent"
+                      android:layout_marginStart="12dp"
+                      android:layout_weight="1"
+                      android:orientation="vertical">
+          
+                      <TextView
+                          android:id="@+id/title"
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          android:ellipsize="end"
+                          android:gravity="start"
+                          android:shadowColor="#99000000"
+                          android:shadowDy="2"
+                          android:shadowRadius="6"
+                          android:singleLine="true"
+                          android:textColor="#FFFFFF"
+                          android:textSize="21sp"
+                          android:textStyle="bold" />
+          
+                      <TextView
+                          android:id="@+id/artist"
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          android:ellipsize="end"
+                          android:gravity="start"
+                          android:shadowColor="#99000000"
+                          android:shadowDy="2"
+                          android:shadowRadius="6"
+                          android:singleLine="true"
+                          android:textColor="#CCFFFFFF"
+                          android:textSize="17sp" />
+          
+                      <TextView
+                          android:layout_width="match_parent"
+                          android:layout_height="1dp"
+                          android:layout_marginBottom="8dp"
+                          android:layout_marginTop="12dp"
+                          android:background="#2EFFFFFF" />
+          
+                      <TextView
+                          android:id="@+id/queue_header"
+                          android:layout_width="wrap_content"
+                          android:layout_height="wrap_content"
+                          android:letterSpacing="0.3"
+                          android:shadowColor="#99000000"
+                          android:shadowDy="2"
+                          android:shadowRadius="6"
+                          android:text="TRACK LIST"
+                          android:textColor="#CCFFFFFF"
+                          android:textSize="12sp" />
+          
+                      <FrameLayout
+                          android:layout_width="match_parent"
+                          android:layout_height="0dp"
+                          android:layout_marginTop="6dp"
+                          android:layout_weight="1">
+          
+                          <ListView
+                              android:id="@+id/queue_list"
+                              android:layout_width="match_parent"
+                              android:layout_height="match_parent"
+                              android:divider="@null"
+                              android:scrollbars="none" />
+          
+                          <TextView
+                              android:id="@+id/empty"
+                              android:layout_width="match_parent"
+                              android:layout_height="match_parent"
+                              android:gravity="center"
+                              android:text=""
+                              android:textSize="14sp" />
+                      </FrameLayout>
+                  </LinearLayout>
+              </LinearLayout>
+          
+              <LinearLayout
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:layout_marginTop="8dp"
+                  android:gravity="center"
+                  android:orientation="horizontal">
+          
+                  <ImageButton
+                      android:id="@+id/prev"
+                      android:layout_width="36dp"
+                      android:layout_height="36dp"
+                      android:background="@android:color/transparent"
+                      android:padding="9dp"
+                      android:src="@drawable/ic_prev" />
+          
+                  <ImageButton
+                      android:id="@+id/play"
+                      android:layout_width="40dp"
+                      android:layout_height="40dp"
+                      android:layout_marginStart="10dp"
+                      android:layout_marginEnd="10dp"
+                      android:background="@drawable/bg_circle"
                       android:padding="11dp"
+                      android:src="@drawable/ic_play" />
+          
+                  <ImageButton
+                      android:id="@+id/next"
+                      android:layout_width="36dp"
+                      android:layout_height="36dp"
+                      android:background="@android:color/transparent"
+                      android:padding="9dp"
+                      android:src="@drawable/ic_next" />
+              </LinearLayout>
+          </LinearLayout>
+          EOF
+          cat > app/src/main/res/layout/widget_t16.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/root"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:padding="10dp">
+          
+              <TextView
+                  android:id="@+id/header"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_marginBottom="10dp"
+                  android:letterSpacing="0.35"
+                  android:shadowColor="#99000000"
+                  android:shadowDy="2"
+                  android:shadowRadius="6"
+                  android:text="NOW PLAYING"
+                  android:textColor="#E6FFFFFF"
+                  android:textSize="13sp" />
+          
+              <LinearLayout
+                  android:layout_width="match_parent"
+                  android:layout_height="0dp"
+                  android:layout_weight="1"
+                  android:orientation="horizontal">
+          
+                  <LinearLayout android:layout_width="142dp" android:layout_height="wrap_content" android:layout_gravity="top" android:orientation="vertical">
+                  <FrameLayout
+                      android:layout_width="142dp"
+                      android:layout_height="104dp"
+                      android:layout_gravity="top">
+          
+                      <ImageView
+                          android:id="@+id/disc"
+                          android:layout_width="104dp"
+                          android:layout_height="104dp"
+                          android:layout_gravity="end|center_vertical"
+                          android:scaleType="fitCenter" />
+          
+                      <ImageView
+                          android:id="@+id/art"
+                          android:layout_width="104dp"
+                          android:layout_height="104dp"
+                          android:layout_gravity="start|center_vertical"
+                          android:scaleType="fitCenter" />
+                  </FrameLayout>
+                      <TextView android:id="@+id/album_name" android:layout_width="142dp" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:ellipsize="end" android:gravity="center" android:shadowColor="#99000000" android:shadowDy="2" android:shadowRadius="6" android:singleLine="true" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                  </LinearLayout>
+          
+                  <LinearLayout
+                      android:layout_width="0dp"
+                      android:layout_height="match_parent"
+                      android:layout_marginStart="12dp"
+                      android:layout_weight="1"
+                      android:orientation="vertical">
+          
+                      <TextView
+                          android:id="@+id/title"
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          android:ellipsize="end"
+                          android:gravity="start"
+                          android:shadowColor="#99000000"
+                          android:shadowDy="2"
+                          android:shadowRadius="6"
+                          android:singleLine="true"
+                          android:textColor="#FFFFFF"
+                          android:textSize="16sp"
+                          android:textStyle="bold" />
+          
+                      <TextView
+                          android:id="@+id/artist"
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          android:ellipsize="end"
+                          android:gravity="start"
+                          android:shadowColor="#99000000"
+                          android:shadowDy="2"
+                          android:shadowRadius="6"
+                          android:singleLine="true"
+                          android:textColor="#CCFFFFFF"
+                          android:textSize="17sp" />
+          
+                      <TextView
+                          android:layout_width="match_parent"
+                          android:layout_height="1dp"
+                          android:layout_marginBottom="8dp"
+                          android:layout_marginTop="12dp"
+                          android:background="#2EFFFFFF" />
+          
+                      <TextView
+                          android:id="@+id/queue_header"
+                          android:layout_width="wrap_content"
+                          android:layout_height="wrap_content"
+                          android:letterSpacing="0.3"
+                          android:shadowColor="#99000000"
+                          android:shadowDy="2"
+                          android:shadowRadius="6"
+                          android:text="TRACK LIST"
+                          android:textColor="#CCFFFFFF"
+                          android:textSize="12sp" />
+          
+                      <FrameLayout
+                          android:layout_width="match_parent"
+                          android:layout_height="0dp"
+                          android:layout_marginTop="6dp"
+                          android:layout_weight="1">
+          
+                          <ListView
+                              android:id="@+id/queue_list"
+                              android:layout_width="match_parent"
+                              android:layout_height="match_parent"
+                              android:divider="@null"
+                              android:scrollbars="none" />
+          
+                          <TextView
+                              android:id="@+id/empty"
+                              android:layout_width="match_parent"
+                              android:layout_height="match_parent"
+                              android:gravity="center"
+                              android:text=""
+                              android:textSize="14sp" />
+                      </FrameLayout>
+                  </LinearLayout>
+              </LinearLayout>
+          
+              <LinearLayout
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:layout_marginTop="8dp"
+                  android:gravity="center"
+                  android:orientation="horizontal">
+          
+                  <ImageButton
+                      android:id="@+id/prev"
+                      android:layout_width="36dp"
+                      android:layout_height="36dp"
+                      android:background="@android:color/transparent"
+                      android:padding="9dp"
+                      android:src="@drawable/ic_prev" />
+          
+                  <ImageButton
+                      android:id="@+id/play"
+                      android:layout_width="40dp"
+                      android:layout_height="40dp"
+                      android:layout_marginStart="10dp"
+                      android:layout_marginEnd="10dp"
+                      android:background="@drawable/bg_circle"
+                      android:padding="11dp"
+                      android:src="@drawable/ic_play" />
+          
+                  <ImageButton
+                      android:id="@+id/next"
+                      android:layout_width="36dp"
+                      android:layout_height="36dp"
+                      android:background="@android:color/transparent"
+                      android:padding="9dp"
                       android:src="@drawable/ic_next" />
               </LinearLayout>
           </LinearLayout>
@@ -656,8 +985,6 @@ jobs:
                   cv.drawCircle(cx, cx, 7f, paint)
                   paint.style = android.graphics.Paint.Style.STROKE
                   paint.strokeWidth = 2f
-                  paint.color = android.graphics.Color.argb(85, 255, 255, 255)
-                  cv.drawCircle(cx, cx, cx - 3f, paint)
                   discBmp = bmp
                   return bmp
               }
@@ -864,9 +1191,19 @@ jobs:
                   }
                   val l = listing(app, c)
 
-                  val rv = RemoteViews(app.packageName, R.layout.widget)
+                  val titleForSize = title ?: "再生中の曲なし"
+                  var wLen = 0.0
+                  for (ch in titleForSize) wLen += if (ch.code > 0x2000) 1.0 else 0.55
+                  val layoutId = when {
+                      wLen <= 8.0 -> R.layout.widget
+                      wLen <= 12.0 -> R.layout.widget_t21
+                      else -> R.layout.widget_t16
+                  }
+                  val rv = RemoteViews(app.packageName, layoutId)
                   rv.setTextViewText(R.id.title, title ?: "再生中の曲なし")
                   rv.setTextViewText(R.id.artist, artist ?: "")
+                  rv.setTextViewText(R.id.album_name, l?.album ?: "")
+                  rv.setViewVisibility(R.id.album_name, if (l?.album.isNullOrEmpty()) android.view.View.GONE else android.view.View.VISIBLE)
                   if (art != null) rv.setImageViewBitmap(R.id.art, art)
                   else rv.setImageViewResource(R.id.art, android.R.drawable.ic_media_play)
                   rv.setImageViewBitmap(R.id.disc, discBitmap())
