@@ -169,7 +169,8 @@ jobs:
                           android:id="@+id/title"
                           android:layout_width="match_parent"
                           android:layout_height="wrap_content"
-                          android:ellipsize="end"
+                          android:ellipsize="marquee"
+                          android:marqueeRepeatLimit="marquee_forever"
                           android:gravity="start"
                           android:shadowColor="#99000000"
                           android:shadowDy="2"
@@ -244,28 +245,28 @@ jobs:
           
                   <ImageButton
                       android:id="@+id/prev"
-                      android:layout_width="52dp"
-                      android:layout_height="52dp"
+                      android:layout_width="44dp"
+                      android:layout_height="44dp"
                       android:background="@android:color/transparent"
-                      android:padding="13dp"
+                      android:padding="11dp"
                       android:src="@drawable/ic_prev" />
           
                   <ImageButton
                       android:id="@+id/play"
-                      android:layout_width="56dp"
-                      android:layout_height="56dp"
-                      android:layout_marginStart="18dp"
-                      android:layout_marginEnd="18dp"
+                      android:layout_width="48dp"
+                      android:layout_height="48dp"
+                      android:layout_marginStart="14dp"
+                      android:layout_marginEnd="14dp"
                       android:background="@drawable/bg_circle"
-                      android:padding="15dp"
+                      android:padding="13dp"
                       android:src="@drawable/ic_play" />
           
                   <ImageButton
                       android:id="@+id/next"
-                      android:layout_width="52dp"
-                      android:layout_height="52dp"
+                      android:layout_width="44dp"
+                      android:layout_height="44dp"
                       android:background="@android:color/transparent"
-                      android:padding="13dp"
+                      android:padding="11dp"
                       android:src="@drawable/ic_next" />
               </LinearLayout>
           </LinearLayout>
@@ -614,29 +615,49 @@ jobs:
                   val cx = size / 2f
                   val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
                   paint.style = android.graphics.Paint.Style.FILL
-                  paint.color = android.graphics.Color.rgb(12, 12, 14)
+                  paint.color = android.graphics.Color.rgb(14, 14, 16)
                   cv.drawCircle(cx, cx, cx - 2f, paint)
                   paint.style = android.graphics.Paint.Style.STROKE
-                  paint.strokeWidth = 2f
+                  paint.strokeWidth = 1.6f
                   var gi = 0
-                  for (r in 94..194 step 9) {
-                      paint.color = android.graphics.Color.argb(if (gi % 2 == 0) 30 else 15, 255, 255, 255)
+                  for (r in 76..198 step 3) {
+                      paint.color = android.graphics.Color.argb(if (gi % 2 == 0) 17 else 9, 255, 255, 255)
                       cv.drawCircle(cx, cx, r.toFloat(), paint)
                       gi++
                   }
-                  paint.strokeWidth = 30f
-                  paint.color = android.graphics.Color.argb(15, 255, 255, 255)
-                  val arcRect = android.graphics.RectF(34f, 34f, size - 34f, size - 34f)
-                  cv.drawArc(arcRect, 205f, 55f, false, paint)
-                  cv.drawArc(arcRect, 25f, 55f, false, paint)
+                  cv.save()
+                  val clip = android.graphics.Path()
+                  clip.addCircle(cx, cx, cx - 4f, android.graphics.Path.Direction.CW)
+                  cv.clipPath(clip)
+                  cv.rotate(-32f, cx, cx)
+                  val sheen = android.graphics.LinearGradient(
+                      0f, cx - 170f, 0f, cx - 10f,
+                      intArrayOf(
+                          android.graphics.Color.argb(0, 255, 255, 255),
+                          android.graphics.Color.argb(36, 255, 255, 255),
+                          android.graphics.Color.argb(0, 255, 255, 255)
+                      ),
+                      floatArrayOf(0f, 0.5f, 1f),
+                      android.graphics.Shader.TileMode.CLAMP
+                  )
                   paint.style = android.graphics.Paint.Style.FILL
-                  paint.color = android.graphics.Color.rgb(40, 40, 45)
+                  paint.shader = sheen
+                  cv.drawRect(-40f, cx - 170f, size + 40f, cx - 10f, paint)
+                  paint.shader = null
+                  cv.restore()
+                  paint.style = android.graphics.Paint.Style.FILL
+                  paint.color = android.graphics.Color.rgb(46, 46, 51)
                   cv.drawCircle(cx, cx, 64f, paint)
-                  paint.color = android.graphics.Color.rgb(8, 8, 8)
+                  paint.style = android.graphics.Paint.Style.STROKE
+                  paint.strokeWidth = 2f
+                  paint.color = android.graphics.Color.argb(95, 255, 255, 255)
+                  cv.drawCircle(cx, cx, 57f, paint)
+                  paint.style = android.graphics.Paint.Style.FILL
+                  paint.color = android.graphics.Color.rgb(10, 10, 10)
                   cv.drawCircle(cx, cx, 7f, paint)
                   paint.style = android.graphics.Paint.Style.STROKE
                   paint.strokeWidth = 2f
-                  paint.color = android.graphics.Color.argb(70, 255, 255, 255)
+                  paint.color = android.graphics.Color.argb(85, 255, 255, 255)
                   cv.drawCircle(cx, cx, cx - 3f, paint)
                   discBmp = bmp
                   return bmp
@@ -846,6 +867,26 @@ jobs:
 
                   val rv = RemoteViews(app.packageName, R.layout.widget)
                   rv.setTextViewText(R.id.title, title ?: "再生中の曲なし")
+                  val titleStr = title ?: "再生中の曲なし"
+                  val density = app.resources.displayMetrics.density
+                  val wDp = try { mgr.getAppWidgetOptions(ids[0]).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 340) } catch (e: Exception) { 340 }
+                  val availPx = ((wDp - 174).coerceAtLeast(60)) * density
+                  val tp = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                  tp.typeface = android.graphics.Typeface.DEFAULT_BOLD
+                  var tsp = 26f
+                  tp.textSize = tsp * density
+                  if (tp.measureText(titleStr) > availPx * 0.98f) {
+                      var lo = 15f
+                      var hi = 26f
+                      while (hi - lo > 0.5f) {
+                          val mid = (lo + hi) / 2f
+                          tp.textSize = mid * density
+                          if (tp.measureText(titleStr) <= availPx * 0.98f) lo = mid else hi = mid
+                      }
+                      tsp = lo
+                  }
+                  rv.setTextViewTextSize(R.id.title, android.util.TypedValue.COMPLEX_UNIT_SP, tsp)
+                  rv.setBoolean(R.id.title, "setSelected", true)
                   rv.setTextViewText(R.id.artist, artist ?: "")
                   if (art != null) rv.setImageViewBitmap(R.id.art, art)
                   else rv.setImageViewResource(R.id.art, android.R.drawable.ic_media_play)
