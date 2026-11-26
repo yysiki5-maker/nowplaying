@@ -602,8 +602,8 @@ jobs:
           cat > app/src/main/res/drawable/ic_play.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="10dp"
-              android:height="10dp"
+              android:width="20dp"
+              android:height="20dp"
               android:viewportWidth="24"
               android:viewportHeight="24">
               <path
@@ -618,8 +618,8 @@ jobs:
           cat > app/src/main/res/drawable/ic_pause.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="10dp"
-              android:height="10dp"
+              android:width="20dp"
+              android:height="20dp"
               android:viewportWidth="24"
               android:viewportHeight="24">
               <path
@@ -634,8 +634,8 @@ jobs:
           cat > app/src/main/res/drawable/ic_next.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="10dp"
-              android:height="10dp"
+              android:width="20dp"
+              android:height="20dp"
               android:viewportWidth="24"
               android:viewportHeight="24">
               <path
@@ -650,8 +650,8 @@ jobs:
           cat > app/src/main/res/drawable/ic_prev.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="10dp"
-              android:height="10dp"
+              android:width="20dp"
+              android:height="20dp"
               android:viewportWidth="24"
               android:viewportHeight="24">
               <path
@@ -861,6 +861,8 @@ jobs:
 
               @Volatile private var lastPkg: String? = null
               @Volatile private var lastToken: android.media.session.MediaSession.Token? = null
+              @Volatile private var playStamps = java.util.concurrent.ConcurrentHashMap<android.media.session.MediaSession.Token, Long>()
+              @Volatile private var wasPlaying = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<android.media.session.MediaSession.Token, Boolean>())
               @Volatile private var artKey: String? = null
               @Volatile private var artBmp: Bitmap? = null
               @Volatile private var forcedPlaying: Boolean? = null
@@ -876,9 +878,27 @@ jobs:
                   return try {
                       val msm = ctx.getSystemService(MediaSessionManager::class.java)
                       val list = msm.getActiveSessions(ComponentName(ctx, MusicListener::class.java))
+                      // Show the session that started playing most recently.
+                      val now = System.currentTimeMillis()
+                      val alive = list.map { it.sessionToken }.toHashSet()
+                      playStamps.keys.retainAll(alive)
+                      wasPlaying.retainAll(alive)
+                      for (ctl in list) {
+                          val tok = ctl.sessionToken
+                          if (isPlaying(ctl)) {
+                              if (!wasPlaying.contains(tok) || !playStamps.containsKey(tok)) playStamps[tok] = now
+                              wasPlaying.add(tok)
+                          } else {
+                              wasPlaying.remove(tok)
+                          }
+                      }
+                      val latestPlaying = list.filter { isPlaying(it) }
+                          .maxByOrNull { playStamps[it.sessionToken] ?: 0L }
+                      val latestPlayed = list.filter { it.metadata != null && playStamps.containsKey(it.sessionToken) }
+                          .maxByOrNull { playStamps[it.sessionToken] ?: 0L }
                       val byToken = list.firstOrNull { it.sessionToken == lastToken && it.metadata != null }
                       val playing = list.firstOrNull { isPlaying(it) }
-                      val chosen = byToken ?: playing
+                      val chosen = latestPlaying ?: latestPlayed ?: byToken ?: playing
                           ?: list.firstOrNull { it.packageName == lastPkg && it.metadata != null }
                           ?: list.firstOrNull { it.metadata != null }
                       if (chosen != null) {
