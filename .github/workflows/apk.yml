@@ -169,8 +169,7 @@ jobs:
                           android:id="@+id/title"
                           android:layout_width="match_parent"
                           android:layout_height="wrap_content"
-                          android:ellipsize="marquee"
-                          android:marqueeRepeatLimit="marquee_forever"
+                          android:ellipsize="end"
                           android:gravity="start"
                           android:shadowColor="#99000000"
                           android:shadowDy="2"
@@ -886,7 +885,6 @@ jobs:
                       tsp = lo
                   }
                   rv.setTextViewTextSize(R.id.title, android.util.TypedValue.COMPLEX_UNIT_SP, tsp)
-                  rv.setBoolean(R.id.title, "setSelected", true)
                   rv.setTextViewText(R.id.artist, artist ?: "")
                   if (art != null) rv.setImageViewBitmap(R.id.art, art)
                   else rv.setImageViewResource(R.id.art, android.R.drawable.ic_media_play)
