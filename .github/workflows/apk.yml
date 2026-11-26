@@ -158,7 +158,7 @@ jobs:
                           android:layout_gravity="start|center_vertical"
                           android:scaleType="fitCenter" />
                   </FrameLayout>
-                      <TextView android:id="@+id/album_name" android:layout_width="142dp" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:ellipsize="end" android:gravity="center" android:shadowColor="#99000000" android:shadowDy="2" android:shadowRadius="6" android:singleLine="true" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                      <TextView android:id="@+id/album_name" android:layout_width="142dp" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:ellipsize="end" android:gravity="center" android:shadowColor="#99000000" android:shadowDy="2" android:shadowRadius="6" android:maxLines="2" android:breakStrategy="simple" android:textColor="#CCFFFFFF" android:textSize="10sp" />
                   </LinearLayout>
           
                   <LinearLayout
@@ -259,7 +259,7 @@ jobs:
                       android:layout_height="40dp"
                       android:layout_marginStart="10dp"
                       android:layout_marginEnd="10dp"
-                      android:background="@drawable/bg_circle"
+                      android:background="@android:color/transparent"
                       android:padding="11dp"
                       android:src="@drawable/ic_play" />
           
@@ -321,7 +321,7 @@ jobs:
                           android:layout_gravity="start|center_vertical"
                           android:scaleType="fitCenter" />
                   </FrameLayout>
-                      <TextView android:id="@+id/album_name" android:layout_width="142dp" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:ellipsize="end" android:gravity="center" android:shadowColor="#99000000" android:shadowDy="2" android:shadowRadius="6" android:singleLine="true" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                      <TextView android:id="@+id/album_name" android:layout_width="142dp" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:ellipsize="end" android:gravity="center" android:shadowColor="#99000000" android:shadowDy="2" android:shadowRadius="6" android:maxLines="2" android:breakStrategy="simple" android:textColor="#CCFFFFFF" android:textSize="10sp" />
                   </LinearLayout>
           
                   <LinearLayout
@@ -422,7 +422,7 @@ jobs:
                       android:layout_height="40dp"
                       android:layout_marginStart="10dp"
                       android:layout_marginEnd="10dp"
-                      android:background="@drawable/bg_circle"
+                      android:background="@android:color/transparent"
                       android:padding="11dp"
                       android:src="@drawable/ic_play" />
           
@@ -484,7 +484,7 @@ jobs:
                           android:layout_gravity="start|center_vertical"
                           android:scaleType="fitCenter" />
                   </FrameLayout>
-                      <TextView android:id="@+id/album_name" android:layout_width="142dp" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:ellipsize="end" android:gravity="center" android:shadowColor="#99000000" android:shadowDy="2" android:shadowRadius="6" android:singleLine="true" android:textColor="#CCFFFFFF" android:textSize="10sp" />
+                      <TextView android:id="@+id/album_name" android:layout_width="142dp" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:ellipsize="end" android:gravity="center" android:shadowColor="#99000000" android:shadowDy="2" android:shadowRadius="6" android:maxLines="2" android:breakStrategy="simple" android:textColor="#CCFFFFFF" android:textSize="10sp" />
                   </LinearLayout>
           
                   <LinearLayout
@@ -585,7 +585,7 @@ jobs:
                       android:layout_height="40dp"
                       android:layout_marginStart="10dp"
                       android:layout_marginEnd="10dp"
-                      android:background="@drawable/bg_circle"
+                      android:background="@android:color/transparent"
                       android:padding="11dp"
                       android:src="@drawable/ic_play" />
           
@@ -607,8 +607,12 @@ jobs:
               android:viewportWidth="24"
               android:viewportHeight="24">
               <path
-                  android:fillColor="#FFFFFF"
-                  android:pathData="M8,5v14l11,-7z" />
+                  android:fillColor="@android:color/transparent"
+                  android:strokeColor="#FFFFFF"
+                  android:strokeWidth="1.7"
+                  android:strokeLineCap="round"
+                  android:strokeLineJoin="round"
+                  android:pathData="M8.5,5.8 L18.5,12 L8.5,18.2 Z" />
           </vector>
           EOF
           cat > app/src/main/res/drawable/ic_pause.xml <<'EOF'
@@ -619,8 +623,12 @@ jobs:
               android:viewportWidth="24"
               android:viewportHeight="24">
               <path
-                  android:fillColor="#FFFFFF"
-                  android:pathData="M6,5h4v14H6zM14,5h4v14h-4z" />
+                  android:fillColor="@android:color/transparent"
+                  android:strokeColor="#FFFFFF"
+                  android:strokeWidth="2.6"
+                  android:strokeLineCap="round"
+                  android:strokeLineJoin="round"
+                  android:pathData="M8.5,6 L8.5,18 M15.5,6 L15.5,18" />
           </vector>
           EOF
           cat > app/src/main/res/drawable/ic_next.xml <<'EOF'
@@ -631,8 +639,12 @@ jobs:
               android:viewportWidth="24"
               android:viewportHeight="24">
               <path
-                  android:fillColor="#FFFFFF"
-                  android:pathData="M6,18l8.5,-6L6,6v12zM16,6h2v12h-2z" />
+                  android:fillColor="@android:color/transparent"
+                  android:strokeColor="#FFFFFF"
+                  android:strokeWidth="1.7"
+                  android:strokeLineCap="round"
+                  android:strokeLineJoin="round"
+                  android:pathData="M6,6.2 L13.5,12 L6,17.8 Z M17.5,6 L17.5,18" />
           </vector>
           EOF
           cat > app/src/main/res/drawable/ic_prev.xml <<'EOF'
@@ -643,8 +655,12 @@ jobs:
               android:viewportWidth="24"
               android:viewportHeight="24">
               <path
-                  android:fillColor="#FFFFFF"
-                  android:pathData="M6,6h2v12H6zM18,6l-8.5,6L18,18z" />
+                  android:fillColor="@android:color/transparent"
+                  android:strokeColor="#FFFFFF"
+                  android:strokeWidth="1.7"
+                  android:strokeLineCap="round"
+                  android:strokeLineJoin="round"
+                  android:pathData="M18,6.2 L10.5,12 L18,17.8 Z M6.5,6 L6.5,18" />
           </vector>
           EOF
           cat > app/src/main/res/drawable/bg_circle.xml <<'EOF'
@@ -1191,7 +1207,7 @@ jobs:
                   }
                   val l = listing(app, c)
 
-                  val titleForSize = title ?: "再生中の曲なし"
+                  val titleForSize = title ?: "QUIET VIBES"
                   var wLen = 0.0
                   for (ch in titleForSize) wLen += if (ch.code > 0x2000) 1.0 else 0.55
                   val layoutId = when {
@@ -1200,14 +1216,35 @@ jobs:
                       else -> R.layout.widget_t16
                   }
                   val rv = RemoteViews(app.packageName, layoutId)
-                  rv.setTextViewText(R.id.title, title ?: "再生中の曲なし")
+                  val idle = title == null
+                  rv.setTextViewText(R.id.title, title ?: "QUIET VIBES")
+                  rv.setViewVisibility(R.id.header, if (idle) android.view.View.GONE else android.view.View.VISIBLE)
                   rv.setTextViewText(R.id.artist, artist ?: "")
                   val albumName = md?.getString(android.media.MediaMetadata.METADATA_KEY_ALBUM) ?: ""
-                  rv.setTextViewText(R.id.album_name, albumName)
+                  var albumDisp = albumName
+                  val suffixes = listOf("オリジナルサウンドトラック", "オリジナル・サウンドトラック", "サウンドトラック", "サントラ", "Original Soundtrack", "ORIGINAL SOUNDTRACK", "OST")
+                  for (sfx in suffixes) {
+                      val ix = albumName.lastIndexOf(sfx)
+                      if (ix > 0) {
+                          val head = albumName.substring(0, ix).trimEnd(' ', '　', ':', '：', '-', '・')
+                          if (head.isNotEmpty()) {
+                              albumDisp = head + "\n" + albumName.substring(ix)
+                              break
+                          }
+                      }
+                  }
+                  rv.setTextViewText(R.id.album_name, albumDisp)
                   rv.setViewVisibility(R.id.album_name, if (albumName.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE)
-                  if (art != null) rv.setImageViewBitmap(R.id.art, art)
-                  else rv.setImageViewResource(R.id.art, android.R.drawable.ic_media_play)
-                  rv.setImageViewBitmap(R.id.disc, discBitmap())
+                  if (idle) {
+                      rv.setViewVisibility(R.id.art, android.view.View.GONE)
+                      rv.setViewVisibility(R.id.disc, android.view.View.GONE)
+                  } else {
+                      rv.setViewVisibility(R.id.art, android.view.View.VISIBLE)
+                      rv.setViewVisibility(R.id.disc, android.view.View.VISIBLE)
+                      if (art != null) rv.setImageViewBitmap(R.id.art, art)
+                      else rv.setImageViewResource(R.id.art, android.R.drawable.ic_media_play)
+                      rv.setImageViewBitmap(R.id.disc, discBitmap())
+                  }
                   rv.setImageViewResource(
                       R.id.play,
                       if (playing) R.drawable.ic_pause else R.drawable.ic_play
