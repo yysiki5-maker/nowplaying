@@ -1202,8 +1202,9 @@ jobs:
                   val rv = RemoteViews(app.packageName, layoutId)
                   rv.setTextViewText(R.id.title, title ?: "再生中の曲なし")
                   rv.setTextViewText(R.id.artist, artist ?: "")
-                  rv.setTextViewText(R.id.album_name, l?.album ?: "")
-                  rv.setViewVisibility(R.id.album_name, if (l?.album.isNullOrEmpty()) android.view.View.GONE else android.view.View.VISIBLE)
+                  val albumName = md?.getString(android.media.MediaMetadata.METADATA_KEY_ALBUM) ?: ""
+                  rv.setTextViewText(R.id.album_name, albumName)
+                  rv.setViewVisibility(R.id.album_name, if (albumName.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE)
                   if (art != null) rv.setImageViewBitmap(R.id.art, art)
                   else rv.setImageViewResource(R.id.art, android.R.drawable.ic_media_play)
                   rv.setImageViewBitmap(R.id.disc, discBitmap())
