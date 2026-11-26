@@ -602,8 +602,8 @@ jobs:
           cat > app/src/main/res/drawable/ic_play.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="20dp"
-              android:height="20dp"
+              android:width="30dp"
+              android:height="30dp"
               android:viewportWidth="24"
               android:viewportHeight="24">
               <path
@@ -618,8 +618,8 @@ jobs:
           cat > app/src/main/res/drawable/ic_pause.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="20dp"
-              android:height="20dp"
+              android:width="30dp"
+              android:height="30dp"
               android:viewportWidth="24"
               android:viewportHeight="24">
               <path
@@ -634,8 +634,8 @@ jobs:
           cat > app/src/main/res/drawable/ic_next.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="20dp"
-              android:height="20dp"
+              android:width="30dp"
+              android:height="30dp"
               android:viewportWidth="24"
               android:viewportHeight="24">
               <path
@@ -650,8 +650,8 @@ jobs:
           cat > app/src/main/res/drawable/ic_prev.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="20dp"
-              android:height="20dp"
+              android:width="30dp"
+              android:height="30dp"
               android:viewportWidth="24"
               android:viewportHeight="24">
               <path
