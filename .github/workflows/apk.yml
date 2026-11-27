@@ -1240,6 +1240,9 @@ jobs:
                   rv.setTextViewText(R.id.title, title ?: "QUIET VIBES")
                   rv.setViewVisibility(R.id.header, if (idle) android.view.View.GONE else android.view.View.VISIBLE)
                   rv.setViewVisibility(R.id.queue_header, if (idle) android.view.View.GONE else android.view.View.VISIBLE)
+                  rv.setViewVisibility(R.id.prev, if (idle) android.view.View.GONE else android.view.View.VISIBLE)
+                  rv.setViewVisibility(R.id.play, if (idle) android.view.View.GONE else android.view.View.VISIBLE)
+                  rv.setViewVisibility(R.id.next, if (idle) android.view.View.GONE else android.view.View.VISIBLE)
                   rv.setTextViewText(R.id.artist, artist ?: "")
                   val albumName = md?.getString(android.media.MediaMetadata.METADATA_KEY_ALBUM) ?: ""
                   var albumDisp = albumName
@@ -1286,8 +1289,19 @@ jobs:
                       PendingIntent.FLAG_IMMUTABLE
                   )
                   val tapPi = openPi ?: settingsPi
-                  for (id in listOf(R.id.root, R.id.art, R.id.disc, R.id.header, R.id.title, R.id.artist, R.id.queue_header, R.id.empty)) {
-                      rv.setOnClickPendingIntent(id, tapPi)
+                  if (idle) {
+                      // Idle: QUIET VIBES (title) opens settings; everywhere else opens UCRT.
+                      val ucrtPi = app.packageManager.getLaunchIntentForPackage("com.uyatame.cdripper")?.let {
+                          PendingIntent.getActivity(app, 6, it, PendingIntent.FLAG_IMMUTABLE)
+                      } ?: settingsPi
+                      rv.setOnClickPendingIntent(R.id.title, settingsPi)
+                      for (id in listOf(R.id.root, R.id.art, R.id.disc, R.id.header, R.id.artist, R.id.queue_header, R.id.empty)) {
+                          rv.setOnClickPendingIntent(id, ucrtPi)
+                      }
+                  } else {
+                      for (id in listOf(R.id.root, R.id.art, R.id.disc, R.id.header, R.id.title, R.id.artist, R.id.queue_header, R.id.empty)) {
+                          rv.setOnClickPendingIntent(id, tapPi)
+                      }
                   }
 
                   rv.setTextViewText(R.id.queue_header, "TRACK LIST")
