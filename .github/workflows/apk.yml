@@ -1227,7 +1227,7 @@ jobs:
                   }
                   val l = listing(app, c)
 
-                  val titleForSize = title ?: "QUIET VIBES"
+                  val titleForSize = title ?: "NO SIGNAL"
                   var wLen = 0.0
                   for (ch in titleForSize) wLen += if (ch.code > 0x2000) 1.0 else 0.55
                   val layoutId = when {
@@ -1237,7 +1237,7 @@ jobs:
                   }
                   val rv = RemoteViews(app.packageName, layoutId)
                   val idle = title == null
-                  rv.setTextViewText(R.id.title, title ?: "QUIET VIBES")
+                  rv.setTextViewText(R.id.title, title ?: "NO SIGNAL")
                   rv.setViewVisibility(R.id.header, if (idle) android.view.View.GONE else android.view.View.VISIBLE)
                   rv.setViewVisibility(R.id.queue_header, if (idle) android.view.View.GONE else android.view.View.VISIBLE)
                   rv.setViewVisibility(R.id.prev, if (idle) android.view.View.GONE else android.view.View.VISIBLE)
@@ -1290,7 +1290,7 @@ jobs:
                   )
                   val tapPi = openPi ?: settingsPi
                   if (idle) {
-                      // Idle: QUIET VIBES (title) opens settings; everywhere else opens UCRT.
+                      // Idle: NO SIGNAL (title) opens settings; everywhere else opens UCRT.
                       val ucrtPi = app.packageManager.getLaunchIntentForPackage("com.uyatame.cdripper")?.let {
                           PendingIntent.getActivity(app, 6, it, PendingIntent.FLAG_IMMUTABLE)
                       } ?: settingsPi
