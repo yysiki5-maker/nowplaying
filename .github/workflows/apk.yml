@@ -170,13 +170,12 @@ jobs:
           
                       <TextView
                           android:id="@+id/title"
+                          android:paddingStart="3dp"
+                          android:paddingTop="3dp"
                           android:layout_width="match_parent"
                           android:layout_height="wrap_content"
                           android:ellipsize="end"
                           android:gravity="start"
-                          android:shadowColor="#99000000"
-                          android:shadowDy="2"
-                          android:shadowRadius="6"
                           android:singleLine="true"
                           android:textColor="#CCFFFFFF"
                           android:textSize="26sp"
@@ -333,13 +332,12 @@ jobs:
           
                       <TextView
                           android:id="@+id/title"
+                          android:paddingStart="3dp"
+                          android:paddingTop="3dp"
                           android:layout_width="match_parent"
                           android:layout_height="wrap_content"
                           android:ellipsize="end"
                           android:gravity="start"
-                          android:shadowColor="#99000000"
-                          android:shadowDy="2"
-                          android:shadowRadius="6"
                           android:singleLine="true"
                           android:textColor="#CCFFFFFF"
                           android:textSize="21sp"
@@ -496,13 +494,12 @@ jobs:
           
                       <TextView
                           android:id="@+id/title"
+                          android:paddingStart="3dp"
+                          android:paddingTop="3dp"
                           android:layout_width="match_parent"
                           android:layout_height="wrap_content"
                           android:ellipsize="end"
                           android:gravity="start"
-                          android:shadowColor="#99000000"
-                          android:shadowDy="2"
-                          android:shadowRadius="6"
                           android:singleLine="true"
                           android:textColor="#CCFFFFFF"
                           android:textSize="16sp"
